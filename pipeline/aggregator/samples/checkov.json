@@ -1,0 +1,65 @@
+{
+  "check_type": "terraform",
+  "results": {
+    "passed_checks": [
+      {
+        "check_id": "CKV_AWS_18",
+        "check_name": "Ensure the S3 bucket has access logging enabled",
+        "check_result": { "result": "PASSED" },
+        "file_path": "/modules/s3/main.tf",
+        "file_line_range": [1, 8],
+        "resource": "aws_s3_bucket.logs",
+        "severity": null
+      }
+    ],
+    "failed_checks": [
+      {
+        "check_id": "CKV_AWS_21",
+        "bc_check_id": "BC_AWS_S3_16",
+        "check_name": "Ensure all data stored in the S3 bucket have versioning enabled",
+        "check_result": { "result": "FAILED" },
+        "code_block": [[12, "resource \"aws_s3_bucket\" \"data\" {"]],
+        "file_path": "/modules/s3/main.tf",
+        "file_abs_path": "/repo/modules/s3/main.tf",
+        "repo_file_path": "/modules/s3/main.tf",
+        "file_line_range": [12, 18],
+        "resource": "aws_s3_bucket.data",
+        "evaluations": null,
+        "check_class": "checkov.terraform.checks.resource.aws.S3Versioning",
+        "severity": "LOW",
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/s3-16"
+      },
+      {
+        "check_id": "CKV_AWS_23",
+        "bc_check_id": "BC_AWS_NETWORKING_2",
+        "check_name": "Ensure every security group rule has a description",
+        "check_result": { "result": "FAILED" },
+        "file_path": "/modules/network/sg.tf",
+        "file_line_range": [30, 45],
+        "resource": "aws_security_group.web",
+        "severity": null,
+        "guideline": "https://docs.prismacloud.io/en/enterprise-edition/policy-reference/aws-policies/networking-2"
+      },
+      {
+        "check_id": "CKV_AWS_79",
+        "check_name": "Ensure Instance Metadata Service Version 1 is not enabled",
+        "check_result": { "result": "FAILED" },
+        "file_path": "/modules/compute/ec2.tf",
+        "file_line_range": [3, 20],
+        "resource": "aws_instance.app",
+        "severity": "HIGH",
+        "guideline": "https://docs.bridgecrew.io/docs/ensure-imdsv1-is-disabled"
+      }
+    ],
+    "skipped_checks": [],
+    "parsing_errors": []
+  },
+  "summary": {
+    "passed": 1,
+    "failed": 3,
+    "skipped": 0,
+    "parsing_errors": 0,
+    "resource_count": 5,
+    "checkov_version": "3.2.0"
+  }
+}

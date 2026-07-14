@@ -1,0 +1,42 @@
+# Stack de dev iac-guard : PostgreSQL + API FastAPI.
+#
+#   docker compose up -d --build      # démarrer (build de l'API)
+#   docker compose logs -f api        # suivre les logs de l'API
+#   docker compose down               # arrêter (garde les données)
+#   docker compose down -v            # arrêter + effacer le volume Postgres
+#
+# API dispo sur http://localhost:8000  (health: /health, docs: /docs)
+
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: iacguard
+      POSTGRES_PASSWORD: iacguard
+      POSTGRES_DB: iacguard
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # L'API n'attend le démarrage que lorsque Postgres accepte les connexions.
+      test: ["CMD-SHELL", "pg_isready -U iacguard -d iacguard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      # `db` = nom du service ci-dessus, résolu par le DNS interne de Compose.
+      DATABASE_URL: postgresql+psycopg://iacguard:iacguard@db:5432/iacguard
+      SECRET_KEY: dev-secret-change-me
+      CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  pgdata:

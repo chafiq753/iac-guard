@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0",
+  "scan": {
+    "repo": "acme/payments-infra",
+    "branch": "main",
+    "commit_sha": "a1b2c3d",
+    "created_at": "2026-07-14T10:00:00Z",
+    "tools": [
+      { "name": "gitleaks", "version": "8.18.0" },
+      { "name": "checkov", "version": "3.2.0" }
+    ]
+  },
+  "findings": [
+    {
+      "fingerprint": "demo-0001",
+      "source": "gitleaks",
+      "category": "secret",
+      "rule_id": "aws-access-token",
+      "title": "AWS access key committed to repository",
+      "severity": "critical",
+      "resource": null,
+      "file": "terraform/main.tf",
+      "line_start": 12,
+      "line_end": 12,
+      "remediation": "Revoke the key in IAM and move it to a secret manager."
+    },
+    {
+      "fingerprint": "demo-0002",
+      "source": "checkov",
+      "category": "misconfiguration",
+      "rule_id": "CKV_AWS_20",
+      "title": "S3 bucket allows public read access",
+      "severity": "high",
+      "resource": "aws_s3_bucket.assets",
+      "file": "terraform/s3.tf",
+      "line_start": 4,
+      "line_end": 18,
+      "remediation": "Set acl = \"private\" and enable public access block."
+    },
+    {
+      "fingerprint": "demo-0003",
+      "source": "checkov",
+      "category": "misconfiguration",
+      "rule_id": "CKV_AWS_24",
+      "title": "Security group opens port 22 to 0.0.0.0/0",
+      "severity": "high",
+      "resource": "aws_security_group.bastion",
+      "file": "terraform/network.tf",
+      "line_start": 22,
+      "line_end": 30,
+      "remediation": "Restrict SSH ingress to a trusted CIDR."
+    },
+    {
+      "fingerprint": "demo-0004",
+      "source": "conftest",
+      "category": "policy",
+      "rule_id": "cndp.data_residency",
+      "title": "Data residency policy: region must be eu-*",
+      "severity": "medium",
+      "resource": "aws_rds_cluster.core",
+      "file": "terraform/rds.tf",
+      "line_start": 1,
+      "line_end": 9,
+      "remediation": "Deploy the cluster in an eu-* region."
+    },
+    {
+      "fingerprint": "demo-0005",
+      "source": "checkov",
+      "category": "misconfiguration",
+      "rule_id": "CKV_AWS_3",
+      "title": "EBS volume not encrypted",
+      "severity": "low",
+      "resource": "aws_ebs_volume.cache",
+      "file": "terraform/ebs.tf",
+      "line_start": 2,
+      "line_end": 7,
+      "remediation": "Set encrypted = true on the volume."
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+# Dépendances de développement / tests (hors image de prod).
+-r requirements.txt
+
+pytest>=8.0,<9
+httpx>=0.27,<1        # requis par fastapi.testclient (TestClient)

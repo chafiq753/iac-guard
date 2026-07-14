@@ -1,0 +1,18 @@
+# Base SQLite de dev
+*.db
+
+# Secrets : ne JAMAIS committer le .env (garder .env.example comme modèle)
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Node / frontend
+node_modules/
+.next/
+#iacg_ESDatia9z4kke8_jmRUXUvoHGR38XCGqZIosoi16pOg

@@ -1,0 +1,49 @@
+[
+  {
+    "filename": "modules/rds/main.tf",
+    "namespace": "iacguard.rds",
+    "successes": 3,
+    "failures": [
+      {
+        "msg": "La base RDS 'aws_db_instance.main' doit chiffrer les données au repos (storage_encrypted = true)",
+        "metadata": {
+          "rule_id": "IAC_RDS_ENCRYPTION",
+          "title": "Chiffrement au repos obligatoire pour RDS",
+          "severity": "critical",
+          "resource": "aws_db_instance.main",
+          "remediation": "Ajouter storage_encrypted = true dans le bloc aws_db_instance"
+        }
+      }
+    ],
+    "warnings": []
+  },
+  {
+    "filename": "modules/s3/main.tf",
+    "namespace": "iacguard.s3",
+    "successes": 1,
+    "failures": [],
+    "warnings": [
+      {
+        "msg": "Le bucket 'aws_s3_bucket.data' devrait avoir un tag 'DataClassification'",
+        "metadata": {
+          "rule_id": "IAC_S3_TAGGING",
+          "title": "Tag de classification des données recommandé",
+          "severity": "low",
+          "resource": "aws_s3_bucket.data",
+          "remediation": "Ajouter tags = { DataClassification = \"...\" }"
+        }
+      }
+    ]
+  },
+  {
+    "filename": "modules/network/sg.tf",
+    "namespace": "iacguard.network",
+    "successes": 0,
+    "failures": [
+      {
+        "msg": "Le security group 'aws_security_group.web' autorise 0.0.0.0/0 sur le port 22 (SSH ouvert au monde)"
+      }
+    ],
+    "warnings": []
+  }
+]

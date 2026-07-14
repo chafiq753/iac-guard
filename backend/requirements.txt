@@ -1,0 +1,21 @@
+fastapi>=0.115,<1
+uvicorn[standard]>=0.30,<1
+sqlalchemy>=2.0,<3
+pydantic>=2.10,<3
+pydantic-settings>=2.5,<3
+# JWT utilisateurs.
+python-jose[cryptography]>=3.3,<4
+# Hachage des mots de passe : Argon2id (recommandation OWASP).
+argon2-cffi>=23.1,<26
+# bcrypt : conservé UNIQUEMENT pour re-vérifier les anciens hash et les
+# re-hacher en Argon2 à la connexion (migration transparente).
+# NB : on l'utilise directement, sans passlib — passlib (non maintenu) lit
+# `bcrypt.__about__`, supprimé depuis bcrypt 4.1, et casse à l'exécution.
+bcrypt>=4.1,<6
+# 2FA : biométrie/passkey (WebAuthn) et code à usage unique (TOTP).
+webauthn>=2.0,<3
+pyotp>=2.9,<3
+# Validation des adresses e-mail (pydantic EmailStr).
+email-validator>=2.0,<3
+# PostgreSQL (prod). En dev SQLite suffit et n'a pas besoin de driver.
+psycopg[binary]>=3.2,<4

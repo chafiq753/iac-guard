@@ -1,0 +1,98 @@
+# =============================================================================
+#  iac-guard — Scan de sécurité & conformité IaC
+#
+#  À COPIER dans le repo Terraform du client : .github/workflows/scan.yml
+#
+#  Prérequis côté client (une seule fois, dans GitHub) :
+#    Settings > Secrets and variables > Actions
+#      - Secret   IACGUARD_TOKEN    = le token du projet (iacg_...)
+#      - Variable IACGUARD_API_URL  = l'URL de ton API (ex: https://api.iac-guard.ma)
+#
+#  Ce workflow se déclenche tout seul à chaque push / pull request. Il :
+#    1. lance Gitleaks, Checkov et Conftest,
+#    2. normalise leurs résultats (aggregator),
+#    3. les envoie à l'API iac-guard.
+# =============================================================================
+
+name: iac-guard scan
+
+on:
+  push:
+  pull_request:
+
+# Versions épinglées (modifiables au même endroit).
+env:
+  GITLEAKS_VERSION: "8.21.2"
+  CONFTEST_VERSION: "0.56.0"
+  # Où récupérer l'aggregator et les policies (TON repo iac-guard, public).
+  # ⚠️ Remplace ORG/iac-guard par le vrai chemin de ton dépôt.
+  IACGUARD_RAW: "https://raw.githubusercontent.com/ORG/iac-guard/main"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      # ------------------------------------------------------------------ #
+      # 1. Récupérer le code Terraform du client
+      # ------------------------------------------------------------------ #
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet -> Gitleaks scanne aussi les commits
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # ------------------------------------------------------------------ #
+      # 2. Les 3 scanners. `continue-on-error: true` : un scanner qui trouve
+      #    des problèmes (et sort en erreur) ne doit PAS bloquer le workflow ;
+      #    on veut collecter tous les résultats, pas s'arrêter au premier.
+      # ------------------------------------------------------------------ #
+      - name: 🔍 Gitleaks (secrets)
+        continue-on-error: true
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks detect --source . \
+            --report-format json --report-path gitleaks.json \
+            --redact --exit-code 0
+
+      - name: 🔍 Checkov (mauvaises configurations)
+        continue-on-error: true
+        run: |
+          pip install checkov
+          # --soft-fail : sort en 0 même si des checks échouent
+          checkov -d . -o json --soft-fail > checkov.json
+
+      - name: 🔍 Conftest (règles métier / policies)
+        continue-on-error: true
+        run: |
+          curl -sSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
+            | tar -xz -C /usr/local/bin conftest
+          # Récupère les policies Rego iac-guard
+          mkdir -p iacguard-policies
+          curl -sSL "${IACGUARD_RAW}/policies/bundle.tar.gz" | tar -xz -C iacguard-policies || true
+          # Scanne les fichiers .tf (parser HCL2). || true : ne bloque pas.
+          conftest test . --parser hcl2 --policy iacguard-policies \
+            --all-namespaces -o json > conftest.json || true
+
+      # ------------------------------------------------------------------ #
+      # 3. Aggregator : normalise les 3 rapports et POST à l'API
+      # ------------------------------------------------------------------ #
+      - name: 🔄 Agréger et envoyer à iac-guard
+        run: |
+          curl -sSL "${IACGUARD_RAW}/pipeline/aggregator/schema.py"        -o schema.py
+          curl -sSL "${IACGUARD_RAW}/pipeline/aggregator/aggregator.py"    -o aggregator.py
+          curl -sSL "${IACGUARD_RAW}/pipeline/aggregator/requirements.txt" -o requirements.txt
+          pip install -r requirements.txt
+          python aggregator.py \
+            --gitleaks gitleaks.json \
+            --checkov  checkov.json \
+            --conftest conftest.json \
+            --repo   "${GITHUB_REPOSITORY}" \
+            --branch "${GITHUB_REF_NAME}" \
+            --commit "${GITHUB_SHA}" \
+            --api-url "${{ vars.IACGUARD_API_URL }}" \
+            --token   "${{ secrets.IACGUARD_TOKEN }}"
