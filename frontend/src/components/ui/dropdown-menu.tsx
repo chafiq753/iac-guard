@@ -57,13 +57,17 @@ function DropdownMenuLabel({
   className,
   inset,
   ...props
-}: MenuPrimitive.GroupLabel.Props & {
+}: React.ComponentProps<"div"> & {
   inset?: boolean
 }) {
+  // Rendu comme un simple libellé (div) plutôt que `MenuPrimitive.GroupLabel` :
+  // ce dernier exige d'être placé dans un `<Menu.Group>`, ce que les menus de
+  // l'app (header, tables) n'utilisent pas — sans le div, ouvrir le menu plante.
   return (
-    <MenuPrimitive.GroupLabel
+    <div
       data-slot="dropdown-menu-label"
       data-inset={inset}
+      role="presentation"
       className={cn(
         "px-1.5 py-1 text-xs font-medium text-muted-foreground data-inset:pl-7",
         className

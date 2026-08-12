@@ -50,8 +50,16 @@ class ScanReportIn(BaseModel):
 
 
 class ScanAccepted(BaseModel):
-    """Réponse de l'API après ingestion réussie."""
+    """Réponse de l'API après ingestion réussie.
+
+    `should_fail` : le pipeline doit sortir en erreur (politique de blocage du
+    projet dépassée). L'aggregator lit ce champ et fixe son code de sortie en
+    conséquence — c'est ce qui fait échouer le job CI/CD, pas l'ingestion
+    elle-même (le scan est toujours enregistré).
+    """
 
     scan_id: int
     project_id: int
     total_findings: int
+    should_fail: bool = False
+    fail_reason: str | None = None

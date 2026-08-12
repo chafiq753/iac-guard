@@ -22,6 +22,10 @@ SEVERITY_WEIGHTS: dict[str, int] = {
     "info": 0,
 }
 
+# Du moins grave au plus grave — sert à comparer un finding à un seuil de
+# blocage ("fail_on_severity") : tout ce qui est à cet index ou après compte.
+SEVERITY_ORDER: list[str] = ["info", "low", "medium", "high", "critical"]
+
 
 @dataclass
 class ScoreResult:
@@ -57,3 +61,14 @@ def compute_score(by_severity: dict[str, int]) -> ScoreResult:
         total_findings=sum(counts.values()),
         by_severity=counts,
     )
+
+
+def exceeds_threshold(by_severity: dict[str, int], threshold: str | None) -> bool:
+    """Vrai si un finding atteint ou dépasse la gravité de blocage du projet.
+
+    `threshold=None` : politique désactivée, ne bloque jamais.
+    """
+    if not threshold or threshold not in SEVERITY_ORDER:
+        return False
+    idx = SEVERITY_ORDER.index(threshold)
+    return any(by_severity.get(sev, 0) > 0 for sev in SEVERITY_ORDER[idx:])

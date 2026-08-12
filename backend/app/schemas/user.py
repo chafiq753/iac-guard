@@ -77,8 +77,25 @@ class UserOut(BaseModel):
 
     id: int
     email: EmailStr
+    name: str | None = None
     created_at: datetime
     mfa_methods: list[str] = []
+
+
+class ProfileUpdate(BaseModel):
+    """Changement de nom et/ou d'e-mail (onglet Compte des Settings)."""
+
+    name: str | None = Field(default=None, max_length=200)
+    email: EmailStr | None = None
+
+
+class PasswordChange(BaseModel):
+    """Changement de mot de passe : exige l'actuel (évite un vol de session)."""
+
+    current_password: str
+    new_password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+
+    _complexity = field_validator("new_password")(_check_password_complexity)
 
 
 class Token(BaseModel):

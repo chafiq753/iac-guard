@@ -32,9 +32,9 @@ import {
 const navMain = [
   { title: "Dashboard", icon: LayoutDashboard, key: "dashboard", href: "/" },
   { title: "Projets", icon: FolderGit2, key: "projects", href: "/projects" },
-  { title: "Wazuh Alerts", icon: ShieldAlert, key: "alerts", href: "/" },
+  { title: "Alertes", icon: ShieldAlert, key: "alerts", href: "/alerts" },
   { title: "Compliance", icon: ClipboardCheck, key: "compliance", href: "/" },
-  { title: "Settings", icon: Settings, key: "settings", href: "/security" },
+  { title: "Settings", icon: Settings, key: "settings", href: "/settings" },
 ] as const;
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {

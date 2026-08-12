@@ -11,6 +11,8 @@ from app.models.finding import Finding
 from app.models.project import Project
 from app.models.scan import Scan
 from app.schemas.ingest import ScanAccepted, ScanReportIn
+from app.services.aggregates import ignored_rule_ids, severity_counts
+from app.services.scoring import exceeds_threshold
 
 router = APIRouter(prefix="/api/scans", tags=["scans"])
 
@@ -59,6 +61,23 @@ def ingest_scan(
         )
 
     db.commit()
+
+    should_fail = False
+    fail_reason = None
+    if project.fail_on_severity:
+        excluded = ignored_rule_ids(db, project.id)
+        counts = severity_counts(db, scan.id, excluded)
+        if exceeds_threshold(counts, project.fail_on_severity):
+            should_fail = True
+            fail_reason = (
+                f"Politique du projet : blocage dès qu'un finding atteint la "
+                f"gravité '{project.fail_on_severity}' ou pire."
+            )
+
     return ScanAccepted(
-        scan_id=scan.id, project_id=project.id, total_findings=scan.total_findings
+        scan_id=scan.id,
+        project_id=project.id,
+        total_findings=scan.total_findings,
+        should_fail=should_fail,
+        fail_reason=fail_reason,
     )

@@ -210,8 +210,12 @@ def build_report(args: argparse.Namespace) -> ScanReport:
     return ScanReport.build(meta, findings)
 
 
-def send_report(report: ScanReport, api_url: str, token: str) -> None:
-    """POST du rapport à l'API. Import local pour ne pas exiger requests en debug."""
+def send_report(report: ScanReport, api_url: str, token: str) -> dict:
+    """POST du rapport à l'API. Import local pour ne pas exiger requests en debug.
+
+    Renvoie le corps de la réponse : l'appelant décide du code de sortie du
+    process en fonction de `should_fail` (politique de blocage du projet).
+    """
     import requests  # noqa: PLC0415
 
     resp = requests.post(
@@ -221,7 +225,9 @@ def send_report(report: ScanReport, api_url: str, token: str) -> None:
         timeout=30,
     )
     resp.raise_for_status()
+    body = resp.json()
     print(f"[iac-guard] Rapport envoyé ({report.summary.total} findings) -> HTTP {resp.status_code}")
+    return body
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -236,10 +242,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--token", help="Token API du projet")
     args = parser.parse_args(argv)
 
+    # Nettoie les espaces/retours à la ligne collés par erreur dans les
+    # secrets CI (un \r\n invisible suffit à casser la résolution DNS).
+    api_url = (args.api_url or "").strip()
+    token = (args.token or "").strip()
+
     report = build_report(args)
 
-    if args.api_url and args.token:
-        send_report(report, args.api_url, args.token)
+    if api_url and token:
+        result = send_report(report, api_url, token)
+        if result.get("should_fail"):
+            print(f"[iac-guard] ÉCHEC DU PIPELINE : {result.get('fail_reason')}")
+            return 1
     else:
         print(json.dumps(report.model_dump(mode="json"), indent=2, ensure_ascii=False))
     return 0

@@ -12,7 +12,16 @@ from app.core.config import settings
 from app.db.session import Base, engine
 
 # Import des modèles pour que SQLAlchemy connaisse les tables avant create_all.
-from app.models import credential, finding, project, scan, triage, user  # noqa: F401
+from app.models import (  # noqa: F401
+    audit_log,
+    credential,
+    finding,
+    ignored_rule,
+    project,
+    scan,
+    triage,
+    user,
+)
 from app.api import auth, findings, projects, scans, twofa
 
 

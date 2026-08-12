@@ -53,6 +53,103 @@ def test_get_unknown_project_404(
     assert client.get("/api/projects/999", headers=auth_headers).status_code == 404
 
 
+def test_duplicate_project_name_rejected(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    client.post("/api/projects", json={"name": "acme/infra"}, headers=auth_headers)
+    resp = client.post(
+        "/api/projects", json={"name": "acme/infra"}, headers=auth_headers
+    )
+    assert resp.status_code == 409
+
+
+def test_same_name_allowed_for_different_users(client: TestClient) -> None:
+    """L'unicité du nom est par utilisateur, pas globale."""
+    a = register_and_login(client, email="a@iac-guard.io")
+    b = register_and_login(client, email="b@iac-guard.io")
+    assert client.post("/api/projects", json={"name": "infra"}, headers=a).status_code == 201
+    assert client.post("/api/projects", json={"name": "infra"}, headers=b).status_code == 201
+
+
+def test_blank_project_name_rejected(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    resp = client.post("/api/projects", json={"name": "   "}, headers=auth_headers)
+    assert resp.status_code == 422
+
+
+def test_delete_project_removes_it_and_its_data(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        "/api/projects", json={"name": "to-delete"}, headers=auth_headers
+    ).json()
+    token = created["token"]
+    client.post(
+        "/api/scans",
+        json=sample_report(),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+
+    resp = client.delete(f"/api/projects/{created['id']}", headers=auth_headers)
+    assert resp.status_code == 204
+    assert client.get(f"/api/projects/{created['id']}", headers=auth_headers).status_code == 404
+
+    # Le token supprimé ne doit plus permettre d'envoyer de scan.
+    ingest = client.post(
+        "/api/scans",
+        json=sample_report(),
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert ingest.status_code == 401
+
+
+def test_cannot_delete_another_users_project(client: TestClient) -> None:
+    owner = register_and_login(client, email="owner@iac-guard.io")
+    intruder = register_and_login(client, email="intruder@iac-guard.io")
+    created = client.post(
+        "/api/projects", json={"name": "private"}, headers=owner
+    ).json()
+
+    resp = client.delete(f"/api/projects/{created['id']}", headers=intruder)
+    assert resp.status_code == 404
+    # Toujours là pour son propriétaire.
+    assert client.get(f"/api/projects/{created['id']}", headers=owner).status_code == 200
+
+
+def test_rotate_token_invalidates_the_old_one(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    created = client.post(
+        "/api/projects", json={"name": "rotating"}, headers=auth_headers
+    ).json()
+    old_token = created["token"]
+
+    resp = client.post(
+        f"/api/projects/{created['id']}/rotate-token", headers=auth_headers
+    )
+    assert resp.status_code == 200
+    new_token = resp.json()["token"]
+    assert new_token != old_token
+    assert new_token.startswith("iacg_")
+
+    # L'ancien token est mort.
+    old_ingest = client.post(
+        "/api/scans",
+        json=sample_report(),
+        headers={"Authorization": f"Bearer {old_token}"},
+    )
+    assert old_ingest.status_code == 401
+
+    # Le nouveau fonctionne.
+    new_ingest = client.post(
+        "/api/scans",
+        json=sample_report(),
+        headers={"Authorization": f"Bearer {new_token}"},
+    )
+    assert new_ingest.status_code == 201
+
+
 # --------------------------------------------------------------------------- #
 # Ingestion (auth par TOKEN DE PROJET, pas par JWT)
 # --------------------------------------------------------------------------- #
@@ -135,6 +232,133 @@ def _ingest(client: TestClient, token: str) -> int:
         headers={"Authorization": f"Bearer {token}"},
     )
     return resp.json()["scan_id"]
+
+
+# --------------------------------------------------------------------------- #
+# Alertes cross-projets (/api/alerts)
+# --------------------------------------------------------------------------- #
+
+
+def test_alerts_span_all_projects(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    p1 = client.post(
+        "/api/projects", json={"name": "proj-1"}, headers=auth_headers
+    ).json()
+    p2 = client.post(
+        "/api/projects", json={"name": "proj-2"}, headers=auth_headers
+    ).json()
+    _ingest(client, p1["token"])
+    _ingest(client, p2["token"])
+
+    resp = client.get("/api/alerts", headers=auth_headers)
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["total"] == 6  # 3 findings x 2 projets
+    project_names = {item["project_name"] for item in body["items"]}
+    assert project_names == {"proj-1", "proj-2"}
+
+
+def test_alerts_only_show_latest_scan_per_project(
+    client: TestClient, auth_headers: dict[str, str], project_token: tuple[int, str]
+) -> None:
+    """Un problème redétecté par 2 scans ne doit pas apparaître 2 fois."""
+    _, token = project_token
+    _ingest(client, token)
+    _ingest(client, token)  # même rapport, ré-envoyé
+
+    body = client.get("/api/alerts", headers=auth_headers).json()
+    assert body["total"] == 3  # pas 6
+
+
+def test_alerts_filter_by_project(
+    client: TestClient, auth_headers: dict[str, str]
+) -> None:
+    p1 = client.post(
+        "/api/projects", json={"name": "alpha"}, headers=auth_headers
+    ).json()
+    p2 = client.post(
+        "/api/projects", json={"name": "beta"}, headers=auth_headers
+    ).json()
+    _ingest(client, p1["token"])
+    _ingest(client, p2["token"])
+
+    body = client.get(
+        "/api/alerts", params={"project_id": p1["id"]}, headers=auth_headers
+    ).json()
+    assert body["total"] == 3
+    assert all(item["project_id"] == p1["id"] for item in body["items"])
+
+
+def test_alerts_reflect_triage_status(
+    client: TestClient, auth_headers: dict[str, str], project_token: tuple[int, str]
+) -> None:
+    _, token = project_token
+    scan_id = _ingest(client, token)
+    finding = client.get(
+        f"/api/scans/{scan_id}/findings", headers=auth_headers
+    ).json()[0]
+
+    client.patch(
+        f"/api/scans/{scan_id}/findings/{finding['id']}/triage",
+        json={"status": "resolved"},
+        headers=auth_headers,
+    )
+
+    open_only = client.get(
+        "/api/alerts", params={"status": "open"}, headers=auth_headers
+    ).json()
+    assert open_only["total"] == 2
+
+    resolved_only = client.get(
+        "/api/alerts", params={"status": "resolved"}, headers=auth_headers
+    ).json()
+    assert resolved_only["total"] == 1
+
+
+def test_alerts_search_query(
+    client: TestClient, auth_headers: dict[str, str], project_token: tuple[int, str]
+) -> None:
+    _, token = project_token
+    _ingest(client, token)
+
+    body = client.get(
+        "/api/alerts", params={"q": "S3 public"}, headers=auth_headers
+    ).json()
+    assert body["total"] == 1
+    assert "S3" in body["items"][0]["title"]
+
+
+def test_alerts_pagination(
+    client: TestClient, auth_headers: dict[str, str], project_token: tuple[int, str]
+) -> None:
+    _, token = project_token
+    _ingest(client, token)
+
+    page1 = client.get(
+        "/api/alerts",
+        params={"page": 1, "page_size": 2},
+        headers=auth_headers,
+    ).json()
+    assert len(page1["items"]) == 2
+    assert page1["total"] == 3
+
+    page2 = client.get(
+        "/api/alerts",
+        params={"page": 2, "page_size": 2},
+        headers=auth_headers,
+    ).json()
+    assert len(page2["items"]) == 1
+
+
+def test_alerts_isolated_per_user(client: TestClient) -> None:
+    a = register_and_login(client, email="a2@iac-guard.io")
+    b = register_and_login(client, email="b2@iac-guard.io")
+    p = client.post("/api/projects", json={"name": "only-a"}, headers=a).json()
+    _ingest(client, p["token"])
+
+    assert client.get("/api/alerts", headers=a).json()["total"] == 3
+    assert client.get("/api/alerts", headers=b).json()["total"] == 0
 
 
 def test_scan_detail_includes_score(

@@ -9,7 +9,13 @@ export default function SecurityPage() {
   return (
     <AuthGuard>
       <main className="mx-auto w-full max-w-2xl px-4 py-8 md:py-12">
-        <Button variant="ghost" size="sm" className="mb-4 -ml-2" render={<Link href="/" />}>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="mb-4 -ml-2"
+          nativeButton={false}
+          render={<Link href="/" />}
+        >
           <ArrowLeft className="size-4" />
           Retour au tableau de bord
         </Button>

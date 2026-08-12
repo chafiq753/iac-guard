@@ -41,6 +41,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SeverityBadge, StatusBadge } from "@/components/severity-badge";
+import { cn } from "@/lib/utils";
 import type { Alert, AlertStatus } from "@/lib/data";
 
 const severityRank: Record<Alert["severity"], number> = {
@@ -51,19 +52,40 @@ const severityRank: Record<Alert["severity"], number> = {
   info: 0,
 };
 
+/** Classe responsive portée par une colonne (masquage selon la largeur). */
+type ColumnMeta = { className?: string };
+
 /** Callback de triage : l'analyste décide du sort d'un finding. */
 type OnTriage = (alert: Alert, status: AlertStatus) => void;
 
-const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
+const makeColumns = (
+  onTriage?: OnTriage,
+  showProject?: boolean
+): ColumnDef<Alert>[] => [
   {
     accessorKey: "id",
     header: "ID",
+    // Référence interne (F-82) : la moins essentielle, masquée sur écrans étroits.
+    meta: { className: "hidden lg:table-cell" } satisfies ColumnMeta,
     cell: ({ row }) => (
       <span className="font-mono text-xs text-muted-foreground">
         {row.getValue("id")}
       </span>
     ),
   },
+  ...(showProject
+    ? ([
+        {
+          accessorKey: "projectName",
+          header: "Projet",
+          cell: ({ row }) => (
+            <span className="text-sm font-medium">
+              {row.original.projectName ?? "—"}
+            </span>
+          ),
+        },
+      ] satisfies ColumnDef<Alert>[])
+    : []),
   {
     accessorKey: "title",
     header: ({ column }) => (
@@ -78,9 +100,16 @@ const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
       </Button>
     ),
     cell: ({ row }) => (
-      <div className="flex flex-col">
-        <span className="font-medium">{row.getValue("title")}</span>
-        <span className="text-xs text-muted-foreground">
+      // Largeur bornée + troncature : les titres longs (Gitleaks est verbeux)
+      // ne doivent pas pousser les colonnes suivantes hors de l'écran.
+      <div className="flex max-w-[13rem] min-w-0 flex-col lg:max-w-[18rem] xl:max-w-[19rem] 2xl:max-w-[30rem]">
+        <span className="truncate font-medium" title={row.getValue("title")}>
+          {row.getValue("title")}
+        </span>
+        <span
+          className="truncate text-xs text-muted-foreground"
+          title={`${row.original.repo} · ${row.original.resource}`}
+        >
           {row.original.repo} · {row.original.resource}
         </span>
       </div>
@@ -120,13 +149,13 @@ const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
   {
     accessorKey: "detectedAt",
     header: "Detected",
+    // Utile mais secondaire : n'apparaît que sur les écrans larges.
+    meta: { className: "hidden xl:table-cell" } satisfies ColumnMeta,
     cell: ({ row }) => (
-      <span className="text-sm text-muted-foreground">
-        {new Date(row.getValue("detectedAt")).toLocaleDateString("en-US", {
-          month: "short",
+      <span className="text-sm whitespace-nowrap text-muted-foreground">
+        {new Date(row.getValue("detectedAt")).toLocaleDateString("fr-FR", {
           day: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
+          month: "short",
         })}
       </span>
     ),
@@ -135,6 +164,9 @@ const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
     id: "actions",
     enableHiding: false,
     cell: ({ row }) => (
+      // Le menu vit dans une ligne cliquable (ouvre le détail) : on coupe la
+      // propagation pour que choisir une action n'ouvre pas aussi le panneau.
+      <div onClick={(e) => e.stopPropagation()}>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -185,6 +217,7 @@ const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      </div>
     ),
   },
 ];
@@ -192,9 +225,24 @@ const makeColumns = (onTriage?: OnTriage): ColumnDef<Alert>[] => [
 export function AlertsDataTable({
   alerts,
   onTriage,
+  onRowClick,
+  showProjectColumn = false,
+  title = "Latest Alerts",
+  description = "Findings from Gitleaks, Checkov and Conftest across your repositories",
+  pageSize = 6,
+  headerAction,
 }: {
   alerts: Alert[];
   onTriage?: OnTriage;
+  /** Ouvre le panneau de détail d'une alerte quand on clique sa ligne. */
+  onRowClick?: (alert: Alert) => void;
+  /** Affiche la colonne "Projet" (vue cross-projets, page /alerts). */
+  showProjectColumn?: boolean;
+  title?: string;
+  description?: string;
+  pageSize?: number;
+  /** Bouton(s) additionnel(s) affiché(s) à côté du titre, ex: "Agrandir". */
+  headerAction?: React.ReactNode;
 }) {
   const [sorting, setSorting] = React.useState<SortingState>([
     { id: "severity", desc: true },
@@ -203,7 +251,10 @@ export function AlertsDataTable({
     []
   );
 
-  const columns = React.useMemo(() => makeColumns(onTriage), [onTriage]);
+  const columns = React.useMemo(
+    () => makeColumns(onTriage, showProjectColumn),
+    [onTriage, showProjectColumn]
+  );
 
   const table = useReactTable({
     data: alerts,
@@ -215,38 +266,48 @@ export function AlertsDataTable({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    initialState: { pagination: { pageSize: 6 } },
+    initialState: { pagination: { pageSize } },
   });
 
   return (
     <Card>
       <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="grid flex-1 gap-1">
-          <CardTitle>Latest Alerts</CardTitle>
-          <CardDescription>
-            Findings from Gitleaks, Checkov and Conftest across your repositories
-          </CardDescription>
+          <div className="flex items-center gap-2">
+            <CardTitle>{title}</CardTitle>
+          </div>
+          <CardDescription>{description}</CardDescription>
         </div>
-        <div className="relative w-full sm:w-64">
-          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Filter alerts…"
-            value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
-            onChange={(e) =>
-              table.getColumn("title")?.setFilterValue(e.target.value)
-            }
-            className="h-9 pl-8"
-          />
+        <div className="flex w-full items-center gap-2 sm:w-auto">
+          <div className="relative w-full sm:w-64">
+            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Filter alerts…"
+              value={(table.getColumn("title")?.getFilterValue() as string) ?? ""}
+              onChange={(e) =>
+                table.getColumn("title")?.setFilterValue(e.target.value)
+              }
+              className="h-9 pl-8"
+            />
+          </div>
+          {headerAction}
         </div>
       </CardHeader>
       <CardContent>
-        <div className="overflow-hidden rounded-lg border">
+        <div className="overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               {table.getHeaderGroups().map((hg) => (
                 <TableRow key={hg.id} className="bg-muted/50">
                   {hg.headers.map((header) => (
-                    <TableHead key={header.id} className="whitespace-nowrap">
+                    <TableHead
+                      key={header.id}
+                      className={cn(
+                        "whitespace-nowrap",
+                        (header.column.columnDef.meta as ColumnMeta | undefined)
+                          ?.className
+                      )}
+                    >
                       {header.isPlaceholder
                         ? null
                         : flexRender(
@@ -261,9 +322,19 @@ export function AlertsDataTable({
             <TableBody>
               {table.getRowModel().rows.length ? (
                 table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id}>
+                  <TableRow
+                    key={row.id}
+                    className={onRowClick ? "cursor-pointer" : undefined}
+                    onClick={() => onRowClick?.(row.original)}
+                  >
                     {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
+                      <TableCell
+                        key={cell.id}
+                        className={
+                          (cell.column.columnDef.meta as ColumnMeta | undefined)
+                            ?.className
+                        }
+                      >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext()
@@ -298,6 +369,10 @@ export function AlertsDataTable({
             >
               Previous
             </Button>
+            <span className="text-xs text-muted-foreground tabular-nums">
+              Page {table.getState().pagination.pageIndex + 1} /{" "}
+              {Math.max(1, table.getPageCount())}
+            </span>
             <Button
               variant="outline"
               size="sm"

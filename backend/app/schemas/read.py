@@ -70,3 +70,58 @@ class ProjectDetail(BaseModel):
     created_at: datetime
     scan_count: int
     latest_score: ScoreOut | None = None
+    last_scan_at: datetime | None = None
+
+
+class ProjectTokenRotated(BaseModel):
+    """Renvoyé UNE seule fois après rotation : contient le nouveau token en clair."""
+
+    token_prefix: str
+    token: str
+
+
+class FindingWithProject(FindingOut):
+    """Un finding enrichi du nom de son projet (vue cross-projets)."""
+
+    project_id: int
+    project_name: str
+    repo: str
+    scan_id: int
+    detected_at: datetime
+    # Commit où le problème a été détecté. Sert à construire un lien vers la
+    # ligne exacte SUR CE COMMIT — pointer vers `main` donnerait une ligne
+    # décalée dès que le fichier bouge.
+    commit_sha: str | None = None
+
+
+class FindingsPage(BaseModel):
+    """Page de résultats paginée pour la vue « toutes les alertes »."""
+
+    items: list[FindingWithProject]
+    total: int
+    page: int
+    page_size: int
+
+
+class AuditLogEntryOut(BaseModel):
+    """Une ligne d'audit : qui a changé le statut de quel finding, et quand."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    project_id: int
+    project_name: str
+    finding_fingerprint: str
+    finding_title: str
+    from_status: str
+    to_status: str
+    note: str | None = None
+    user_email: str | None = None
+    created_at: datetime
+
+
+class AuditLogPage(BaseModel):
+    items: list[AuditLogEntryOut]
+    total: int
+    page: int
+    page_size: int

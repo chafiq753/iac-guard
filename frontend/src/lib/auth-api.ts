@@ -50,6 +50,7 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface UserOut {
   id: number;
   email: string;
+  name: string | null;
   created_at: string;
   mfa_methods: string[];
 }
@@ -127,6 +128,23 @@ export const authApi = {
   logout: () => request<void>("/api/auth/logout", { method: "POST" }),
 
   me: () => request<UserOut>("/api/auth/me"),
+
+  /** Change le nom et/ou l'e-mail affichés. */
+  updateProfile: (payload: { name?: string; email?: string }) =>
+    request<UserOut>("/api/auth/me", {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    }),
+
+  /** Exige le mot de passe actuel — évite qu'une session volée suffise à en changer un. */
+  changePassword: (currentPassword: string, newPassword: string) =>
+    request<void>("/api/auth/me/password", {
+      method: "POST",
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    }),
 
   // --- 2FA : vérification au login --- #
   verifyTotp: (code: string) =>

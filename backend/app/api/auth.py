@@ -30,6 +30,8 @@ from app.schemas.user import (
     EmailIn,
     LoginMethodsOut,
     LoginResult,
+    PasswordChange,
+    ProfileUpdate,
     UserCreate,
     UserLogin,
     UserOut,
@@ -230,3 +232,47 @@ def logout(response: Response) -> None:
 def me(current_user: User = Depends(get_current_user)) -> User:
     """Profil de l'utilisateur connecté (vérifie que la session est valide)."""
     return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+def update_profile(
+    payload: ProfileUpdate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> User:
+    """Change le nom et/ou l'e-mail affichés. Le mot de passe a sa propre route."""
+    if payload.email is not None and payload.email != current_user.email:
+        existing = db.scalar(select(User).where(User.email == payload.email))
+        if existing is not None:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Un compte existe déjà avec cet e-mail.",
+            )
+        current_user.email = payload.email
+
+    if payload.name is not None:
+        current_user.name = payload.name.strip() or None
+
+    db.commit()
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/password", status_code=204)
+def change_password(
+    payload: PasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> None:
+    """Change le mot de passe : exige l'actuel pour éviter qu'une session
+
+    volée (XSS, appareil laissé ouvert) suffise à verrouiller le compte hors
+    de portée du vrai propriétaire.
+    """
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Mot de passe actuel incorrect.",
+        )
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()

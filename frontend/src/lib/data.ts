@@ -26,6 +26,19 @@ export interface Alert {
   /** Ids réels côté API (absents des données mock). */
   findingId?: number;
   scanId?: number;
+  projectId?: number;
+  projectName?: string;
+  remediation?: string | null;
+  /**
+   * Emplacement exact dans le code. Séparé de `resource` : un secret Gitleaks
+   * n'a pas de ressource Terraform, seulement un fichier et une ligne — les
+   * confondre faisait disparaître la ligne, la seule info utile pour corriger.
+   */
+  file?: string | null;
+  lineStart?: number | null;
+  lineEnd?: number | null;
+  /** Commit de détection, pour lier vers la ligne telle qu'elle était alors. */
+  commitSha?: string | null;
 }
 
 export interface Kpi {

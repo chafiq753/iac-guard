@@ -3,12 +3,13 @@
 import * as React from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronsUpDown, FolderGit2, Inbox, Plus } from "lucide-react";
+import { ChevronsUpDown, FolderGit2, Inbox, Maximize2, Plus } from "lucide-react";
 
 import { KpiCards } from "@/components/kpi-cards";
 import { ActivityChart } from "@/components/activity-chart";
 import { AlertsDataTable } from "@/components/alerts-data-table";
 import { ComplianceCard } from "@/components/compliance-card";
+import { FindingDetailSheet } from "@/components/finding-detail-sheet";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -58,6 +59,7 @@ export function DashboardLive() {
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
   const [data, setData] = React.useState<DashboardData | null>(null);
   const [loadingData, setLoadingData] = React.useState(false);
+  const [selectedAlert, setSelectedAlert] = React.useState<Alert | null>(null);
 
   // 1. Charger les projets, choisir celui de l'URL ou le premier.
   React.useEffect(() => {
@@ -80,14 +82,18 @@ export function DashboardLive() {
     };
   }, [requestedId]);
 
-  // 2. Charger scans + findings du projet sélectionné.
+  // 2. Charger scans + findings du projet sélectionné, puis re-vérifier en
+  // arrière-plan toutes les 30s (silencieusement) : si le pipeline envoie un
+  // nouveau scan pendant que le dashboard est ouvert, il apparaît tout seul,
+  // sans que l'utilisateur ait à rafraîchir la page.
   React.useEffect(() => {
     if (selectedId === null) return;
     let cancelled = false;
-    setLoadingData(true);
-    (async () => {
+
+    async function refresh(silent: boolean) {
+      if (!silent) setLoadingData(true);
       try {
-        const scans = await platformApi.listScans(selectedId);
+        const scans = await platformApi.listScans(selectedId as number);
         if (scans.length === 0) {
           if (!cancelled)
             setData({ scans, latest: null, previous: null, findings: [], history: [] });
@@ -107,14 +113,18 @@ export function DashboardLive() {
             history: detailed,
           });
       } catch {
-        if (!cancelled)
+        if (!cancelled && !silent)
           setData({ scans: [], latest: null, previous: null, findings: [], history: [] });
       } finally {
-        if (!cancelled) setLoadingData(false);
+        if (!cancelled && !silent) setLoadingData(false);
       }
-    })();
+    }
+
+    void refresh(false);
+    const interval = setInterval(() => void refresh(true), 30_000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, [selectedId]);
 
@@ -147,7 +157,7 @@ export function DashboardLive() {
               s&apos;afficheront ici.
             </p>
           </div>
-          <Button render={<Link href="/projects" />}>
+          <Button nativeButton={false} render={<Link href="/projects" />}>
             <Plus className="size-4" />
             Créer mon premier projet
           </Button>
@@ -297,12 +307,21 @@ export function DashboardLive() {
     category: f.category as Alert["category"],
     severity: f.severity as Alert["severity"],
     ruleId: f.rule_id,
+    // Voir alerts-manager : repli d'affichage pour la colonne, l'emplacement
+    // exact reste porté par file/lineStart/lineEnd.
     resource: f.resource ?? f.file ?? "—",
     repo: latest.repo,
     status: f.status as AlertStatus,
     detectedAt: latest.scanned_at,
     findingId: f.id,
     scanId: latest.id,
+    projectId: selected.id,
+    projectName: selected.name,
+    remediation: f.remediation,
+    file: f.file,
+    lineStart: f.line_start,
+    lineEnd: f.line_end,
+    commitSha: latest.commit_sha,
   }));
 
   async function onTriage(alert: Alert, status: AlertStatus) {
@@ -322,6 +341,11 @@ export function DashboardLive() {
                 f.id === updated.id ? updated : f
               ),
             }
+          : prev
+      );
+      setSelectedAlert((prev) =>
+        prev && prev.findingId === updated.id
+          ? { ...prev, status: updated.status as AlertStatus }
           : prev
       );
       toast.success(
@@ -345,7 +369,29 @@ export function DashboardLive() {
         <ComplianceCard score={latest.score} />
       </div>
 
-      <AlertsDataTable alerts={alerts} onTriage={(a, s) => void onTriage(a, s)} />
+      <AlertsDataTable
+        alerts={alerts}
+        onTriage={(a, s) => void onTriage(a, s)}
+        onRowClick={setSelectedAlert}
+        headerAction={
+          <Button
+            variant="outline"
+            size="sm"
+            nativeButton={false}
+            render={<Link href={`/alerts?project=${selected.id}`} />}
+          >
+            <Maximize2 className="size-4" />
+            Agrandir
+          </Button>
+        }
+      />
+
+      <FindingDetailSheet
+        alert={selectedAlert}
+        open={selectedAlert !== null}
+        onOpenChange={(open) => !open && setSelectedAlert(null)}
+        onTriage={(a, s) => void onTriage(a, s)}
+      />
     </div>
   );
 }

@@ -23,7 +23,12 @@ class Settings(BaseSettings):
     # Origines autorisées pour le frontend (CORS).
     # Doit être une liste EXPLICITE (jamais "*") : les cookies de session ne
     # sont envoyés qu'avec `allow_credentials=True`, incompatible avec "*".
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # Pour GitHub Actions via Cloudflare tunnel, ajoute l'URL du tunnel ici.
+    cors_origins: list[str] = [
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://actions-tampa-bathroom-relating.trycloudflare.com",  # Current tunnel
+    ]
 
     # --- Session (cookie) -------------------------------------------------- #
     # Le JWT est déposé dans un cookie httpOnly : JavaScript ne peut pas le
