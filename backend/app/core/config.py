@@ -2,7 +2,21 @@
 
 from __future__ import annotations
 
+import logging
+import secrets
+
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+logger = logging.getLogger("iacguard.config")
+
+# Valeur de `secret_key` livrée avec le dépôt. Elle est publique par
+# construction : quiconque lit le code la connaît. Un JWT signé avec elle est
+# donc forgeable par n'importe qui — d'où le refus de démarrer en production.
+DEV_SECRET_KEY = "dev-secret-change-me"
+
+# En dessous de cette longueur, une clé HS256 devient attaquable hors ligne.
+MIN_SECRET_KEY_LENGTH = 32
 
 
 class Settings(BaseSettings):
@@ -11,13 +25,19 @@ class Settings(BaseSettings):
     # Nom de l'app
     app_name: str = "iac-guard"
 
+    # "development" ou "production". Pilote les garde-fous ci-dessous : en
+    # production, un secret faible ou par défaut empêche le démarrage.
+    environment: str = "development"
+
     # Base de données.
     # Par défaut SQLite (dev, aucun service à lancer). En prod on met une URL
     # PostgreSQL : postgresql+psycopg://user:pass@host:5432/iacguard
     database_url: str = "sqlite:///./iacguard.db"
 
-    # Clé secrète pour signer les JWT utilisateurs (à changer en prod).
-    secret_key: str = "dev-secret-change-me"
+    # Clé secrète pour signer les JWT utilisateurs.
+    # Générer une valeur propre avec : python -c "import secrets;
+    # print(secrets.token_urlsafe(48))"
+    secret_key: str = DEV_SECRET_KEY
     access_token_expire_minutes: int = 60 * 24
 
     # Origines autorisées pour le frontend (CORS).
@@ -61,6 +81,52 @@ class Settings(BaseSettings):
     # Anti-spam sur POST /api/admin/users/invite : au-delà, un admin doit
     # attendre. Compté sur les entrées "user.invited" de admin_audit_logs.
     max_invites_per_hour: int = 10
+
+    @property
+    def is_production(self) -> bool:
+        return self.environment.strip().lower() in ("production", "prod")
+
+    @model_validator(mode="after")
+    def _verifier_secrets(self) -> "Settings":
+        """Refuse de démarrer en production avec une configuration dangereuse.
+
+        Le code de ce dépôt est public : la clé par défaut l'est donc aussi.
+        Démarrer en production avec elle laisserait n'importe qui forger un
+        jeton de session valide — sans mot de passe ni second facteur. Mieux
+        vaut un démarrage qui échoue bruyamment qu'une authentification qui
+        semble fonctionner tout en étant contournable.
+        """
+        faible = (
+            self.secret_key == DEV_SECRET_KEY
+            or len(self.secret_key) < MIN_SECRET_KEY_LENGTH
+        )
+
+        if self.is_production:
+            if faible:
+                raise ValueError(
+                    "SECRET_KEY absente, trop courte ou laissée à sa valeur par "
+                    f"défaut alors que ENVIRONMENT=production. Il faut au moins "
+                    f"{MIN_SECRET_KEY_LENGTH} caractères. Générer une clé avec :\n"
+                    '    python -c "import secrets; print(secrets.token_urlsafe(48))"'
+                )
+            if not self.cookie_secure:
+                raise ValueError(
+                    "COOKIE_SECURE doit valoir true en production : sans HTTPS "
+                    "imposé, le cookie de session circule en clair."
+                )
+        elif faible:
+            # En développement on ne bloque pas, mais on le dit : cette ligne
+            # doit sauter aux yeux dans les logs.
+            logger.warning(
+                "Clé de signature de développement utilisée. Ne JAMAIS déployer "
+                "ainsi : définir SECRET_KEY et ENVIRONMENT=production."
+            )
+        return self
+
+
+def generer_secret_key() -> str:
+    """Clé adaptée à HS256, à placer dans la variable SECRET_KEY."""
+    return secrets.token_urlsafe(48)
 
 
 settings = Settings()

@@ -30,7 +30,14 @@ services:
     environment:
       # `db` = nom du service ci-dessus, résolu par le DNS interne de Compose.
       DATABASE_URL: postgresql+psycopg://iacguard:iacguard@db:5432/iacguard
-      SECRET_KEY: dev-secret-change-me
+      # Pile de DÉVELOPPEMENT uniquement. `ENVIRONMENT=development` autorise la
+      # clé de signature par défaut ; l'application refuse de démarrer avec
+      # elle si ENVIRONMENT vaut production (voir backend/app/core/config.py).
+      #
+      # Pour un déploiement réel : passer ENVIRONMENT=production, fournir
+      # SECRET_KEY via un gestionnaire de secrets, et activer COOKIE_SECURE.
+      ENVIRONMENT: development
+      SECRET_KEY: ${SECRET_KEY:-dev-secret-change-me}
       CORS_ORIGINS: '["http://localhost:3000","http://localhost:5173"]'
     ports:
       - "8000:8000"

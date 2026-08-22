@@ -121,6 +121,37 @@ un fichier `.env` (voir `backend/.env.example`).
 Pour que le résultat conditionne les fusions, activer la protection de la
 branche principale en exigeant le check `scan`.
 
+## Sécurité
+
+Le code de ce dépôt est public. Sa sécurité ne repose donc pas sur le secret
+de son implémentation, mais sur celui des clés fournies au déploiement.
+
+La configuration livrée est celle d'un poste de développement. Elle contient
+une clé de signature connue de tous, puisqu'elle figure dans le code. Pour
+qu'elle ne puisse pas être utilisée par inadvertance, l'application **refuse
+de démarrer** lorsque `ENVIRONMENT=production` et que l'une de ces conditions
+est réunie :
+
+- `SECRET_KEY` absente, laissée à sa valeur par défaut, ou plus courte que
+  32 caractères ;
+- `COOKIE_SECURE` désactivé, ce qui laisserait le cookie de session circuler
+  hors HTTPS.
+
+En développement, l'application démarre mais journalise un avertissement.
+
+Générer une clé de production :
+
+```bash
+python -c "import secrets; print(secrets.token_urlsafe(48))"
+```
+
+Mesures en place : mots de passe hachés en Argon2id, jetons de projet et codes
+de récupération stockés sous forme d'empreinte, session en cookie `httpOnly`,
+`SameSite=Lax` contre le CSRF, liste d'origines CORS explicite, verrouillage
+après échecs répétés, réponses identiques pour un compte existant ou non afin
+d'empêcher l'énumération, et vérification du rôle en base à chaque requête
+sensible plutôt que dans le jeton.
+
 ## État du projet
 
 La chaîne complète est fonctionnelle : analyse, ingestion, tableau de bord,
