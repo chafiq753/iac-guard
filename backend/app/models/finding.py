@@ -18,8 +18,8 @@ class Finding(Base):
     # Identité stable du finding (dédup / suivi dans le temps).
     fingerprint: Mapped[str] = mapped_column(String(64), index=True)
 
-    source: Mapped[str] = mapped_column(String(20))       # gitleaks / checkov / conftest
-    category: Mapped[str] = mapped_column(String(30))     # secret / misconfiguration / policy
+    source: Mapped[str] = mapped_column(String(20))       # gitleaks / checkov / conftest / semgrep
+    category: Mapped[str] = mapped_column(String(30))     # secret / misconfiguration / policy / vulnerability
     rule_id: Mapped[str] = mapped_column(String(120))
     title: Mapped[str] = mapped_column(Text)
     severity: Mapped[str] = mapped_column(String(10), index=True)

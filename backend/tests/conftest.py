@@ -25,11 +25,15 @@ from app.db.session import Base, get_db
 
 # Import des modèles pour que create_all connaisse toutes les tables.
 from app.models import (  # noqa: F401
+    admin_audit_log,
     audit_log,
     credential,
     finding,
     ignored_rule,
+    invitation,
+    organization,
     project,
+    project_access,
     scan,
     triage,
     user,

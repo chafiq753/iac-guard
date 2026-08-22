@@ -51,6 +51,8 @@ export interface UserOut {
   id: number;
   email: string;
   name: string | null;
+  /** Rôle RBAC : admin, security_lead, developer, auditor, viewer. */
+  role: string;
   created_at: string;
   mfa_methods: string[];
 }

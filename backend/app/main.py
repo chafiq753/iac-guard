@@ -13,16 +13,20 @@ from app.db.session import Base, engine
 
 # Import des modèles pour que SQLAlchemy connaisse les tables avant create_all.
 from app.models import (  # noqa: F401
+    admin_audit_log,
     audit_log,
     credential,
     finding,
     ignored_rule,
+    invitation,
+    organization,
     project,
+    project_access,
     scan,
     triage,
     user,
 )
-from app.api import auth, findings, projects, scans, twofa
+from app.api import admin, auth, findings, projects, scans, twofa
 
 
 @asynccontextmanager
@@ -58,3 +62,5 @@ app.include_router(twofa.router)
 app.include_router(projects.router)
 app.include_router(scans.router)
 app.include_router(findings.router)
+app.include_router(admin.router)
+app.include_router(admin.public_router)

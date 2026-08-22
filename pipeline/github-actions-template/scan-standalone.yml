@@ -1,0 +1,120 @@
+# =============================================================================
+#  iac-guard — Scan de sécurité & conformité
+#
+#  Configuration (Settings > Secrets and variables > Actions) :
+#    - Secret   IAC_GUARD_TOKEN    = token du projet (iacg_...)
+#    - Variable IAC_GUARD_API_URL  = URL publique de l'API (sans / final)
+#
+#  L'aggregator vit dans `.iacguard/` : il normalise les sorties des trois
+#  scanners en un schéma unique avant de les envoyer. C'est lui qui calcule
+#  les empreintes (fingerprints) permettant de suivre un même problème d'un
+#  scan à l'autre.
+# =============================================================================
+
+name: iac-guard Scan
+
+on:
+  workflow_dispatch:      # bouton « Run workflow » dans l'onglet Actions
+  push:
+    paths:
+      - '**.tf'
+      - '**.py'
+      - '**.js'
+      - '.github/workflows/scan.yml'
+  pull_request:
+
+env:
+  GITLEAKS_VERSION: "8.21.2"
+  SEMGREP_VERSION: "1.78.0"
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout du repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # historique complet -> Gitleaks scanne aussi les commits
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Vérifier que l'API est joignable
+        env:
+          RAW_API_URL: ${{ vars.IAC_GUARD_API_URL }}
+        run: |
+          # Un copier-coller depuis Windows colle facilement un \r\n invisible
+          # à la fin de la variable. curl le refuse alors ("URL rejected:
+          # Malformed input"), avec un message qui ne dit pas pourquoi. On
+          # nettoie donc espaces et retours à la ligne, puis on retire un
+          # éventuel / final (sinon on construirait ".../\/health").
+          API_URL="$(printf '%s' "$RAW_API_URL" | tr -d '[:space:]' | sed 's:/*$::')"
+          if [ -z "$API_URL" ]; then
+            echo "::error::La variable IAC_GUARD_API_URL n'est pas définie."
+            exit 1
+          fi
+          echo "API_URL=$API_URL" >> "$GITHUB_ENV"
+
+          # L'API tourne souvent derrière un tunnel éphémère : mieux vaut
+          # échouer ici, avec un message clair, qu'après 3 minutes de scan.
+          curl -fsS --max-time 20 "$API_URL/health" \
+            || { echo "::error::API injoignable ($API_URL). Tunnel arrêté ou URL périmée ?"; exit 1; }
+
+      # ------------------------------------------------------------------ #
+      #  Scanners. `continue-on-error` : un scanner qui TROUVE des problèmes
+      #  sort en code non-nul — ce n'est pas un échec du job, on veut
+      #  collecter les trois rapports plutôt que s'arrêter au premier.
+      # ------------------------------------------------------------------ #
+      - name: Gitleaks (secrets)
+        continue-on-error: true
+        run: |
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | tar -xz -C /usr/local/bin gitleaks
+          gitleaks detect --source . \
+            --report-format json --report-path gitleaks.json \
+            --redact --exit-code 0
+
+      - name: Checkov (mauvaises configurations IaC)
+        continue-on-error: true
+        run: |
+          pip install checkov
+          checkov -d . -o json --soft-fail > checkov.json
+
+      - name: Semgrep (SAST — code applicatif)
+        continue-on-error: true
+        run: |
+          pip install "semgrep==${SEMGREP_VERSION}"
+          semgrep scan --config=auto --json --output semgrep.json || true
+
+      # ------------------------------------------------------------------ #
+      #  Envoi. PAS de `continue-on-error` ni de try/except silencieux ici :
+      #  si l'envoi échoue, le job DOIT échouer — un pipeline vert alors que
+      #  le scan s'est perdu en route est pire que pas de scan du tout.
+      # ------------------------------------------------------------------ #
+      - name: Agréger et envoyer à iac-guard
+        run: |
+          pip install "pydantic>=2.10,<3" "requests>=2.31,<3"
+          python .iacguard/aggregator.py \
+            --gitleaks gitleaks.json \
+            --checkov  checkov.json \
+            --semgrep  semgrep.json \
+            --repo   "${GITHUB_REPOSITORY}" \
+            --branch "${GITHUB_REF_NAME}" \
+            --commit "${GITHUB_SHA}" \
+            --api-url "$API_URL" \
+            --token   "${{ secrets.IAC_GUARD_TOKEN }}"
+
+      # Rapports bruts téléchargeables depuis la page du run : utile pour
+      # comprendre un finding sans relancer tout le scan.
+      - name: Publier les rapports bruts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rapports-scanners
+          path: |
+            gitleaks.json
+            checkov.json
+            semgrep.json
+          if-no-files-found: ignore

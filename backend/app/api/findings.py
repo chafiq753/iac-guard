@@ -1,7 +1,8 @@
 """Routes de lecture des scans et findings (consommées par le dashboard).
 
 Toutes ces routes exigent un JWT utilisateur et sont cloisonnées : on ne peut
-lire que les scans/findings des projets qu'on possède.
+lire que les scans/findings des projets accessibles à l'utilisateur (accès
+global pour admin/security_lead, sinon octroi explicite — voir deps.py).
 """
 
 from __future__ import annotations
@@ -10,11 +11,17 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import desc, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_owned_project, get_owned_scan
+from app.api.deps import (
+    get_accessible_project,
+    get_accessible_scan,
+    get_current_user,
+    list_accessible_projects,
+)
 from app.db.session import get_db
 from app.models.audit_log import TriageAuditLog
 from app.models.finding import Finding
 from app.models.project import Project
+from app.models.project_access import ProjectAccess
 from app.models.scan import Scan
 from app.models.triage import TRIAGE_STATUSES, FindingTriage
 from app.models.user import User
@@ -57,13 +64,26 @@ def list_audit_log(
     page_size: int = Query(20, ge=1, le=100),
     db: Session = Depends(get_db),
 ) -> AuditLogPage:
-    """Historique des décisions de triage, tous projets confondus.
+    """Historique des décisions de triage, tous projets visibles confondus.
 
     Append-only : contrairement aux findings, une ligne d'audit n'est jamais
     modifiée ni supprimée — c'est ce qui en fait une preuve fiable pour un
     auditeur externe (CNDP, Bank Al-Maghrib...).
     """
-    stmt = select(TriageAuditLog).where(TriageAuditLog.owner_id == current_user.id)
+    # Filtre sur `owner_id` (dénormalisé) et NON sur la liste des projets
+    # existants : une ligne d'audit doit rester lisible après la suppression
+    # du projet qu'elle documente.
+    if current_user.has_global_project_access:
+        org_member_ids = select(User.id).where(User.org_id == current_user.org_id)
+        visible = TriageAuditLog.owner_id.in_(org_member_ids)
+    else:
+        shared_ids = select(ProjectAccess.project_id).where(
+            ProjectAccess.user_id == current_user.id
+        )
+        visible = (TriageAuditLog.owner_id == current_user.id) | (
+            TriageAuditLog.project_id.in_(shared_ids)
+        )
+    stmt = select(TriageAuditLog).where(visible)
     if project_id is not None:
         stmt = stmt.where(TriageAuditLog.project_id == project_id)
     stmt = stmt.order_by(desc(TriageAuditLog.created_at))
@@ -99,7 +119,7 @@ def list_audit_log(
 
 @router.get("/api/projects/{project_id}/scans", response_model=list[ScanListItem])
 def list_scans(
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> list[Scan]:
     """Historique des scans d'un projet, du plus récent au plus ancien."""
@@ -130,11 +150,7 @@ def list_alerts(
     scan sont montrées (pas tout l'historique) — sinon un même problème
     redétecté à chaque scan apparaîtrait en double, en triple...
     """
-    projects = list(
-        db.scalars(
-            select(Project).where(Project.owner_id == current_user.id)
-        ).all()
-    )
+    projects = list_accessible_projects(db, current_user)
     if project_id is not None:
         projects = [p for p in projects if p.id == project_id]
 
@@ -201,7 +217,7 @@ def list_alerts(
 
 @router.get("/api/scans/{scan_id}", response_model=ScanDetail)
 def get_scan(
-    scan: Scan = Depends(get_owned_scan),
+    scan: Scan = Depends(get_accessible_scan),
     db: Session = Depends(get_db),
 ) -> ScanDetail:
     """Un scan avec son score de conformité calculé."""
@@ -218,7 +234,7 @@ def get_scan(
 
 @router.get("/api/scans/{scan_id}/findings", response_model=list[FindingOut])
 def list_findings(
-    scan: Scan = Depends(get_owned_scan),
+    scan: Scan = Depends(get_accessible_scan),
     severity: str | None = Query(None, description="Filtrer par gravité"),
     category: str | None = Query(None, description="Filtrer par catégorie"),
     status: str | None = Query(None, description="Filtrer par statut de triage"),
@@ -255,7 +271,7 @@ def list_findings(
 def triage_finding(
     finding_id: int,
     payload: TriageIn,
-    scan: Scan = Depends(get_owned_scan),
+    scan: Scan = Depends(get_accessible_scan),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> FindingOut:

@@ -1,7 +1,12 @@
-# Base SQLite de dev
+# Base SQLite de developpement
 *.db
 
-# Secrets : ne JAMAIS committer le .env (garder .env.example comme modèle)
+# Sauvegardes de base : contiennent des hachages de mots de passe et de jetons
+*.bak
+*.bak-*
+*.sql
+
+# Secrets : ne jamais committer le .env (garder .env.example comme modele)
 .env
 .env.local
 
@@ -15,4 +20,15 @@ venv/
 # Node / frontend
 node_modules/
 .next/
-#0nBlr{b22$89
+out/
+
+# Rapports de scan produits par le pipeline
+gitleaks.json
+checkov.json
+semgrep.json
+conftest.json
+
+# Editeurs
+.vscode/
+.idea/
+.DS_Store

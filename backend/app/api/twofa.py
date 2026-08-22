@@ -168,6 +168,8 @@ def webauthn_auth_verify(
     except mfa_service.MfaError as exc:
         raise _mfa_error(exc) from exc
 
+    mfa_user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
     set_session_cookie(response, create_access_token(mfa_user.id))
     return {"id": mfa_user.id, "email": mfa_user.email}
 
@@ -240,6 +242,8 @@ def totp_verify_login(
     if not mfa_service.totp_verify(mfa_user.totp_secret, payload.code):
         raise HTTPException(status_code=401, detail="Code invalide.")
 
+    mfa_user.last_login_at = datetime.now(timezone.utc)
+    db.commit()
     set_session_cookie(response, create_access_token(mfa_user.id))
     return {"id": mfa_user.id, "email": mfa_user.email}
 
@@ -270,6 +274,7 @@ def recovery_verify(
         raise HTTPException(status_code=401, detail="Code de récupération invalide.")
 
     match.used_at = datetime.now(timezone.utc)  # consommé : plus jamais réutilisable
+    mfa_user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
     set_session_cookie(response, create_access_token(mfa_user.id))

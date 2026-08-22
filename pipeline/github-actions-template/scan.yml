@@ -9,7 +9,7 @@
 #      - Variable IACGUARD_API_URL  = l'URL de ton API (ex: https://api.iac-guard.ma)
 #
 #  Ce workflow se déclenche tout seul à chaque push / pull request. Il :
-#    1. lance Gitleaks, Checkov et Conftest,
+#    1. lance Gitleaks, Checkov, Conftest et Semgrep,
 #    2. normalise leurs résultats (aggregator),
 #    3. les envoie à l'API iac-guard.
 # =============================================================================
@@ -24,8 +24,9 @@ on:
 env:
   GITLEAKS_VERSION: "8.21.2"
   CONFTEST_VERSION: "0.56.0"
+  SEMGREP_VERSION: "1.78.0"
   # Où récupérer l'aggregator et les policies (TON repo iac-guard, public).
-  # ⚠️ Remplace ORG/iac-guard par le vrai chemin de ton dépôt.
+  # Remplace ORG/iac-guard par le vrai chemin de ton dépôt.
   IACGUARD_RAW: "https://raw.githubusercontent.com/ORG/iac-guard/main"
 
 jobs:
@@ -46,11 +47,11 @@ jobs:
           python-version: "3.12"
 
       # ------------------------------------------------------------------ #
-      # 2. Les 3 scanners. `continue-on-error: true` : un scanner qui trouve
+      # 2. Les 4 scanners. `continue-on-error: true` : un scanner qui trouve
       #    des problèmes (et sort en erreur) ne doit PAS bloquer le workflow ;
       #    on veut collecter tous les résultats, pas s'arrêter au premier.
       # ------------------------------------------------------------------ #
-      - name: 🔍 Gitleaks (secrets)
+      - name: Gitleaks (secrets)
         continue-on-error: true
         run: |
           curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
@@ -59,14 +60,14 @@ jobs:
             --report-format json --report-path gitleaks.json \
             --redact --exit-code 0
 
-      - name: 🔍 Checkov (mauvaises configurations)
+      - name: Checkov (mauvaises configurations)
         continue-on-error: true
         run: |
           pip install checkov
           # --soft-fail : sort en 0 même si des checks échouent
           checkov -d . -o json --soft-fail > checkov.json
 
-      - name: 🔍 Conftest (règles métier / policies)
+      - name: Conftest (règles métier / policies)
         continue-on-error: true
         run: |
           curl -sSL "https://github.com/open-policy-agent/conftest/releases/download/v${CONFTEST_VERSION}/conftest_${CONFTEST_VERSION}_Linux_x86_64.tar.gz" \
@@ -78,10 +79,17 @@ jobs:
           conftest test . --parser hcl2 --policy iacguard-policies \
             --all-namespaces -o json > conftest.json || true
 
+      - name: Semgrep (SAST — code applicatif)
+        continue-on-error: true
+        run: |
+          pip install "semgrep==${SEMGREP_VERSION}"
+          # --config=auto : jeu de règles Semgrep Registry adapté aux langages détectés.
+          semgrep scan --config=auto --json --output semgrep.json || true
+
       # ------------------------------------------------------------------ #
-      # 3. Aggregator : normalise les 3 rapports et POST à l'API
+      # 3. Aggregator : normalise les 4 rapports et POST à l'API
       # ------------------------------------------------------------------ #
-      - name: 🔄 Agréger et envoyer à iac-guard
+      - name: Agréger et envoyer à iac-guard
         run: |
           curl -sSL "${IACGUARD_RAW}/pipeline/aggregator/schema.py"        -o schema.py
           curl -sSL "${IACGUARD_RAW}/pipeline/aggregator/aggregator.py"    -o aggregator.py
@@ -91,6 +99,7 @@ jobs:
             --gitleaks gitleaks.json \
             --checkov  checkov.json \
             --conftest conftest.json \
+            --semgrep  semgrep.json \
             --repo   "${GITHUB_REPOSITORY}" \
             --branch "${GITHUB_REF_NAME}" \
             --commit "${GITHUB_SHA}" \

@@ -228,7 +228,7 @@ export function AlertsDataTable({
   onRowClick,
   showProjectColumn = false,
   title = "Latest Alerts",
-  description = "Findings from Gitleaks, Checkov and Conftest across your repositories",
+  description = "Findings from Gitleaks, Checkov, Conftest and Semgrep across your repositories",
   pageSize = 6,
   headerAction,
 }: {

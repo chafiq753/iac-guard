@@ -1,7 +1,8 @@
 """Routes projets : création (renvoie le token) et liste.
 
 Toutes ces routes exigent un JWT utilisateur : un projet appartient à son
-créateur, et un utilisateur ne voit jamais les projets des autres.
+créateur. Un utilisateur voit ses propres projets, plus ceux que l'admin de
+son organisation lui a partagés (voir deps.list_accessible_projects).
 """
 
 from __future__ import annotations
@@ -11,7 +12,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, get_owned_project
+from app.api.deps import get_accessible_project, get_current_user, list_accessible_projects
 from app.core.security import generate_project_token, hash_token, token_preview
 from app.db.session import get_db
 from app.models.ignored_rule import IgnoredRule
@@ -77,15 +78,13 @@ def list_projects(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> list[Project]:
-    """Liste les projets de l'utilisateur connecté (sans les tokens)."""
-    return list(
-        db.scalars(select(Project).where(Project.owner_id == current_user.id)).all()
-    )
+    """Liste les projets visibles par l'utilisateur connecté (sans les tokens)."""
+    return list_accessible_projects(db, current_user)
 
 
 @router.get("/{project_id}", response_model=ProjectDetail)
 def get_project(
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> ProjectDetail:
     """Vue d'ensemble d'un projet : nombre de scans + score du dernier scan."""
@@ -116,7 +115,7 @@ def get_project(
 
 @router.delete("/{project_id}", status_code=204)
 def delete_project(
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> None:
     """Supprime un projet et tout son historique (scans, findings, triage).
@@ -130,7 +129,7 @@ def delete_project(
 
 @router.post("/{project_id}/rotate-token", response_model=ProjectTokenRotated)
 def rotate_token(
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> ProjectTokenRotated:
     """Invalide l'ancien token et en émet un nouveau (affiché une seule fois).
@@ -153,7 +152,7 @@ def rotate_token(
 
 @router.get("/{project_id}/policy", response_model=ScanPolicyOut)
 def get_policy(
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> ScanPolicyOut:
     rules = db.scalars(
@@ -170,7 +169,7 @@ def get_policy(
 @router.patch("/{project_id}/policy", response_model=ScanPolicyOut)
 def update_policy(
     payload: ScanPolicyUpdate,
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> ScanPolicyOut:
     """Change le seuil de blocage du pipeline (null = ne jamais bloquer)."""
@@ -184,7 +183,7 @@ def update_policy(
 )
 def add_ignored_rule(
     payload: IgnoredRuleCreate,
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ) -> IgnoredRule:
@@ -218,7 +217,7 @@ def add_ignored_rule(
 @router.delete("/{project_id}/ignored-rules/{ignored_rule_id}", status_code=204)
 def remove_ignored_rule(
     ignored_rule_id: int,
-    project: Project = Depends(get_owned_project),
+    project: Project = Depends(get_accessible_project),
     db: Session = Depends(get_db),
 ) -> None:
     """Ré-active la règle : ses findings recomptent dans le score."""

@@ -3,13 +3,14 @@
  *
  * Shapes mirror the backend read schema (`FindingOut`, `ScoreOut`) and the
  * pipeline `Finding` model: findings come from Gitleaks (secrets), Checkov
- * (misconfiguration) and Conftest/OPA (policy), each with a normalized
- * severity. In a real deployment these would be fetched from `/api/*`.
+ * (misconfiguration), Conftest/OPA (policy) and Semgrep (vulnerability, SAST
+ * on application code), each with a normalized severity. In a real
+ * deployment these would be fetched from `/api/*`.
  */
 
 export type Severity = "critical" | "high" | "medium" | "low" | "info";
-export type FindingSource = "gitleaks" | "checkov" | "conftest";
-export type FindingCategory = "secret" | "misconfiguration" | "policy";
+export type FindingSource = "gitleaks" | "checkov" | "conftest" | "semgrep";
+export type FindingCategory = "secret" | "misconfiguration" | "policy" | "vulnerability";
 export type AlertStatus = "open" | "acknowledged" | "resolved" | "false_positive";
 
 export interface Alert {
@@ -91,7 +92,7 @@ export const kpis: Kpi[] = [
     label: "Scans (7d)",
     value: "134",
     delta: 22.3,
-    hint: "Gitleaks · Checkov · Conftest",
+    hint: "Gitleaks · Checkov · Conftest · Semgrep",
   },
 ];
 
@@ -106,6 +107,21 @@ export const activitySeries: ActivityPoint[] = [
 ];
 
 export const alerts: Alert[] = [
+  {
+    id: "ALG-1043",
+    title: "Command injection via subprocess with shell=True",
+    source: "semgrep",
+    category: "vulnerability",
+    severity: "high",
+    ruleId: "python.lang.security.audit.dangerous-subprocess-use",
+    resource: "app/services/export.py",
+    repo: "acme/checkout-web",
+    status: "open",
+    detectedAt: "2026-07-09T09:02:00Z",
+    file: "app/services/export.py",
+    lineStart: 42,
+    lineEnd: 42,
+  },
   {
     id: "ALG-1042",
     title: "AWS access key committed to repository",

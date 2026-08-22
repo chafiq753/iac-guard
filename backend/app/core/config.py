@@ -23,12 +23,7 @@ class Settings(BaseSettings):
     # Origines autorisées pour le frontend (CORS).
     # Doit être une liste EXPLICITE (jamais "*") : les cookies de session ne
     # sont envoyés qu'avec `allow_credentials=True`, incompatible avec "*".
-    # Pour GitHub Actions via Cloudflare tunnel, ajoute l'URL du tunnel ici.
-    cors_origins: list[str] = [
-        "http://localhost:5173",
-        "http://localhost:3000",
-        "https://actions-tampa-bathroom-relating.trycloudflare.com",  # Current tunnel
-    ]
+    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
 
     # --- Session (cookie) -------------------------------------------------- #
     # Le JWT est déposé dans un cookie httpOnly : JavaScript ne peut pas le
@@ -58,6 +53,14 @@ class Settings(BaseSettings):
     webauthn_rp_name: str = "iac-guard"
     # Origines exactes autorisées à présenter une assertion WebAuthn.
     webauthn_origins: list[str] = ["http://localhost:3000"]
+
+    # --- Comptes admin / invitations ---------------------------------------- #
+    # URL du dashboard : sert à construire le lien d'invitation dans l'e-mail.
+    frontend_url: str = "http://localhost:3000"
+    invitation_expire_hours: int = 72
+    # Anti-spam sur POST /api/admin/users/invite : au-delà, un admin doit
+    # attendre. Compté sur les entrées "user.invited" de admin_audit_logs.
+    max_invites_per_hour: int = 10
 
 
 settings = Settings()

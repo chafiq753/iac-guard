@@ -66,6 +66,15 @@ def token_preview(token: str) -> str:
     return token[: len(TOKEN_PREFIX) + 4] + "…"
 
 
+def generate_invitation_token() -> str:
+    """Jeton d'invitation en clair, à mettre dans le lien e-mail.
+
+    Comme le token de projet : seul son hash (`hash_token`) est stocké, et il
+    n'est JAMAIS renvoyé par l'API — uniquement livré par e-mail.
+    """
+    return secrets.token_urlsafe(32)
+
+
 # --------------------------------------------------------------------------- #
 # Mots de passe utilisateurs (Argon2id, avec repli bcrypt en lecture)
 # --------------------------------------------------------------------------- #

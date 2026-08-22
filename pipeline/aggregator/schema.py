@@ -1,8 +1,8 @@
 """
 Schéma JSON unifié iac-guard.
 
-Rôle : normaliser les sorties de Gitleaks, Checkov et OPA/Conftest en un
-format commun. Ce module est la source de vérité du contrat pipeline -> API.
+Rôle : normaliser les sorties de Gitleaks, Checkov, OPA/Conftest et Semgrep en
+un format commun. Ce module est la source de vérité du contrat pipeline -> API.
 Il est volontairement autonome (aucune dépendance au backend) pour pouvoir
 être copié/importé côté pipeline sans tirer tout le SaaS.
 
@@ -39,12 +39,14 @@ class Category(str, Enum):
     SECRET = "secret"                      # Gitleaks
     MISCONFIGURATION = "misconfiguration"  # Checkov
     POLICY = "policy"                      # OPA/Conftest (règle métier)
+    VULNERABILITY = "vulnerability"        # Semgrep (SAST, code applicatif)
 
 
 class ToolName(str, Enum):
     GITLEAKS = "gitleaks"
     CHECKOV = "checkov"
     CONFTEST = "conftest"
+    SEMGREP = "semgrep"
 
 
 class ToolInfo(BaseModel):

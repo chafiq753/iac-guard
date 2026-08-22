@@ -331,15 +331,17 @@ export function ProjectsManager() {
                         </TableCell>
                         <TableCell onClick={(e) => e.stopPropagation()}>
                           <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Actions pour ${p.name}`}
-                              >
-                                <MoreHorizontal className="size-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
+                            <DropdownMenuTrigger
+                              render={
+                                <Button
+                                  variant="ghost"
+                                  size="icon-sm"
+                                  aria-label={`Actions pour ${p.name}`}
+                                >
+                                  <MoreHorizontal className="size-4" />
+                                </Button>
+                              }
+                            />
                             <DropdownMenuContent align="end" className="w-56">
                               <DropdownMenuLabel>{p.name}</DropdownMenuLabel>
                               <DropdownMenuItem onClick={() => setRotateTarget(p)}>

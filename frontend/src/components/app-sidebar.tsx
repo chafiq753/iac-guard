@@ -12,6 +12,7 @@ import {
   Settings,
   LifeBuoy,
   LogOut,
+  Users,
 } from "lucide-react";
 
 import { useAuth } from "@/components/auth-provider";
@@ -34,12 +35,18 @@ const navMain = [
   { title: "Projets", icon: FolderGit2, key: "projects", href: "/projects" },
   { title: "Alertes", icon: ShieldAlert, key: "alerts", href: "/alerts" },
   { title: "Compliance", icon: ClipboardCheck, key: "compliance", href: "/" },
+  // Réservé au rôle admin (l'API renvoie 403 aux autres de toute façon).
+  { title: "Administration", icon: Users, key: "admin", href: "/admin", adminOnly: true },
   { title: "Settings", icon: Settings, key: "settings", href: "/settings" },
 ] as const;
 
 export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
+
+  const items = navMain.filter(
+    (item) => !("adminOnly" in item && item.adminOnly) || user?.role === "admin"
+  );
 
   // L'entrée active est celle dont la route correspond exactement ; les items
   // pointant encore vers "/" (pages à venir) ne s'activent que sur l'accueil.
@@ -70,7 +77,7 @@ export function AppSidebar(props: React.ComponentProps<typeof Sidebar>) {
         <SidebarGroup>
           <SidebarGroupLabel>Platform</SidebarGroupLabel>
           <SidebarMenu>
-            {navMain.map((item) => (
+            {items.map((item) => (
               <SidebarMenuItem key={item.key}>
                 <SidebarMenuButton
                   isActive={active === item.key}

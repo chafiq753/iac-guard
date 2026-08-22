@@ -25,6 +25,7 @@ from app.core.security import (
     verify_password,
 )
 from app.db.session import get_db
+from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.user import (
     EmailIn,
@@ -72,7 +73,12 @@ def _register_failure(db: Session, user: User) -> None:
 
 @router.post("/register", response_model=UserOut, status_code=201)
 def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
-    """Crée un compte. L'e-mail doit être unique."""
+    """Crée un compte. L'e-mail doit être unique.
+
+    Auto-inscription = création d'une nouvelle organisation dont ce compte
+    devient l'admin. Les collègues rejoignent ensuite cette organisation par
+    invitation (voir /api/admin/users/invite), jamais par un second register.
+    """
     existing = db.scalar(select(User).where(User.email == payload.email))
     if existing is not None:
         raise HTTPException(
@@ -80,9 +86,16 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> User:
             detail="Un compte existe déjà avec cet e-mail.",
         )
 
+    org_name = (payload.org_name or payload.email.split("@", 1)[0]).strip()
+    organization = Organization(name=org_name or payload.email)
+    db.add(organization)
+    db.flush()  # obtient organization.id avant de créer l'utilisateur
+
     user = User(
         email=payload.email,
         hashed_password=hash_password(payload.password),
+        org_id=organization.id,
+        role="admin",
     )
     db.add(user)
     db.commit()
@@ -110,6 +123,12 @@ def login(
         hash_password(payload.password)
         raise _BAD_CREDENTIALS
 
+    if user.hashed_password is None:
+        # Invitation en attente : aucun mot de passe n'a encore été choisi.
+        # Même traitement qu'un compte inconnu (anti-énumération + anti-timing).
+        hash_password(payload.password)
+        raise _BAD_CREDENTIALS
+
     if _is_locked(user):
         raise HTTPException(
             status_code=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -132,6 +151,7 @@ def login(
     # Connexion réussie : on remet les compteurs à zéro.
     user.failed_login_attempts = 0
     user.locked_until = None
+    user.last_login_at = datetime.now(timezone.utc)
 
     # Migration transparente : le mot de passe est en clair ICI et nulle part
     # ailleurs — c'est le seul moment où l'on peut convertir un vieux hash
@@ -201,6 +221,7 @@ def webauthn_login_verify(
 
     user.failed_login_attempts = 0
     user.locked_until = None
+    user.last_login_at = datetime.now(timezone.utc)
     db.commit()
 
     set_session_cookie(response, create_access_token(user.id))

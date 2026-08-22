@@ -21,7 +21,10 @@ class Project(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     name: Mapped[str] = mapped_column(String(200))
 
-    # Propriétaire : un utilisateur ne voit que SES projets (cloisonnement).
+    # Propriétaire : un utilisateur ne voit que SES projets, plus ceux que
+    # l'admin de son organisation lui a explicitement partagés (voir
+    # ProjectAccess) ou, pour admin/security_lead, tous ceux possédés par un
+    # membre de la même organisation (voir deps.list_accessible_projects).
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
 
     # Authentification pipeline -> API : on ne stocke JAMAIS le token en clair,

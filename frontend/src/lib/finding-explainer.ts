@@ -108,6 +108,13 @@ const BY_RULE: Record<string, FindingExplanation> = {
       "Selon le service concerné, cette clé peut permettre d'usurper des appels d'API en votre nom (envoi d'e-mails, appels facturés, accès à des données).",
     fix: "Vérifiez à quel service appartient cette clé, révoquez-la, et déplacez-la vers un secret manager.",
   },
+  "python.lang.security.audit.dangerous-subprocess-use": {
+    impact:
+      "Une commande shell est construite avec `shell=True` à partir d'une entrée qui peut être influencée par l'utilisateur.",
+    exploit:
+      "Un attaquant qui contrôle cette entrée peut injecter des commandes arbitraires exécutées avec les droits du processus (Remote Code Execution).",
+    fix: "Évitez `shell=True` : passez la commande sous forme de liste d'arguments à `subprocess.run()`, sans passer par un shell.",
+  },
 };
 
 /** Repli par catégorie si la règle précise n'est pas dans la base ci-dessus. */
@@ -131,6 +138,13 @@ const BY_CATEGORY: Record<FindingCategory | string, FindingExplanation> = {
     exploit:
       "Selon la règle, la conséquence est réglementaire (non-conformité CNDP/BAM lors d'un audit) plutôt qu'une exploitation technique directe.",
     fix: "Ajustez la ressource pour respecter la règle (voir la remédiation ci-dessus si fournie).",
+  },
+  vulnerability: {
+    impact:
+      "Le code applicatif contient un motif à risque connu (analyse statique / SAST), indépendant de la configuration cloud.",
+    exploit:
+      "Selon la faille, l'exploitation va de la fuite de données à l'exécution de code arbitraire si l'entrée concernée est atteignable par un utilisateur externe.",
+    fix: "Corrigez le motif signalé dans le code source (voir la remédiation ci-dessus si fournie) et ajoutez un test de non-régression.",
   },
 };
 
@@ -157,12 +171,14 @@ export const SOURCE_LABELS: Record<FindingSource | string, string> = {
   gitleaks: "Gitleaks — détection de secrets",
   checkov: "Checkov — mauvaises configurations IaC",
   conftest: "Conftest — règles métier (OPA/Rego)",
+  semgrep: "Semgrep — analyse statique du code (SAST)",
 };
 
 export const CATEGORY_LABELS: Record<FindingCategory | string, string> = {
   secret: "Secret exposé",
   misconfiguration: "Mauvaise configuration",
   policy: "Non-conformité à une règle",
+  vulnerability: "Vulnérabilité dans le code",
 };
 
 export const SEVERITY_LABELS: Record<Severity | string, string> = {

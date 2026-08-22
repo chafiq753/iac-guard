@@ -1,8 +1,8 @@
 """
 Aggregator iac-guard.
 
-Lit les sorties JSON brutes de Gitleaks, Checkov et OPA/Conftest, les
-normalise en `Finding` (schéma unifié), construit un `ScanReport` et
+Lit les sorties JSON brutes de Gitleaks, Checkov, OPA/Conftest et Semgrep,
+les normalise en `Finding` (schéma unifié), construit un `ScanReport` et
 le POST à l'API backend, authentifié par le token du projet.
 
 Usage (dans le pipeline GitHub Actions) :
@@ -11,6 +11,7 @@ Usage (dans le pipeline GitHub Actions) :
         --gitleaks gitleaks.json \
         --checkov  checkov.json \
         --conftest conftest.json \
+        --semgrep  semgrep.json \
         --repo "$GITHUB_REPOSITORY" \
         --branch "$GITHUB_REF_NAME" \
         --commit "$GITHUB_SHA" \
@@ -43,7 +44,7 @@ from schema import (
 # Helpers
 # --------------------------------------------------------------------------- #
 
-# Sévérité déclarée en toutes lettres (Checkov, metadata Rego) -> enum.
+# Sévérité déclarée en toutes lettres (Checkov, metadata Rego, Semgrep) -> enum.
 _SEVERITY_MAP = {
     "critical": Severity.CRITICAL,
     "high": Severity.HIGH,
@@ -53,6 +54,10 @@ _SEVERITY_MAP = {
     "info": Severity.INFO,
     "informational": Severity.INFO,
     "none": Severity.INFO,
+    # Semgrep utilise ERROR/WARNING/INFO (`extra.severity`) plutôt que
+    # critical/high/medium/low.
+    "error": Severity.HIGH,
+    "warning": Severity.MEDIUM,
 }
 
 
@@ -172,6 +177,38 @@ def parse_conftest(data: Any) -> list[Finding]:
     return findings
 
 
+def parse_semgrep(data: Any) -> list[Finding]:
+    """
+    Semgrep (`semgrep --config=auto --json`) : objet {results: [...]}.
+    SAST sur le code applicatif (pas l'IaC) -> pas de `resource` cloud.
+    Sévérité déclarée dans `extra.severity` (ERROR/WARNING/INFO).
+    """
+    if not data:
+        return []
+    results = data.get("results") or []
+    findings: list[Finding] = []
+    for item in results:
+        extra = item.get("extra") or {}
+        start = item.get("start") or {}
+        end = item.get("end") or {}
+        findings.append(
+            Finding(
+                source=ToolName.SEMGREP,
+                category=Category.VULNERABILITY,
+                rule_id=item.get("check_id", "unknown"),
+                title=extra.get("message", "Vulnérabilité détectée").split("\n")[0],
+                severity=_norm_severity(extra.get("severity"), Severity.MEDIUM),
+                resource=None,
+                file=item.get("path"),
+                line_start=start.get("line"),
+                line_end=end.get("line"),
+                remediation=extra.get("fix"),
+                raw=item,
+            )
+        )
+    return findings
+
+
 # --------------------------------------------------------------------------- #
 # Assemblage + envoi
 # --------------------------------------------------------------------------- #
@@ -181,11 +218,13 @@ def build_report(args: argparse.Namespace) -> ScanReport:
     gitleaks_data = _load_json(args.gitleaks)
     checkov_data = _load_json(args.checkov)
     conftest_data = _load_json(args.conftest)
+    semgrep_data = _load_json(args.semgrep)
 
     findings: list[Finding] = []
     findings += parse_gitleaks(gitleaks_data)
     findings += parse_checkov(checkov_data)
     findings += parse_conftest(conftest_data)
+    findings += parse_semgrep(semgrep_data)
 
     tools: list[ToolInfo] = []
     if gitleaks_data is not None:
@@ -199,6 +238,9 @@ def build_report(args: argparse.Namespace) -> ScanReport:
         tools.append(ToolInfo(name=ToolName.CHECKOV, version=version))
     if conftest_data is not None:
         tools.append(ToolInfo(name=ToolName.CONFTEST))
+    if semgrep_data is not None:
+        version = semgrep_data.get("version")
+        tools.append(ToolInfo(name=ToolName.SEMGREP, version=version))
 
     meta = ScanMeta(
         repo=args.repo,
@@ -235,6 +277,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--gitleaks", help="Chemin du JSON Gitleaks")
     parser.add_argument("--checkov", help="Chemin du JSON Checkov")
     parser.add_argument("--conftest", help="Chemin du JSON Conftest")
+    parser.add_argument("--semgrep", help="Chemin du JSON Semgrep")
     parser.add_argument("--repo", required=True, help="owner/repo")
     parser.add_argument("--branch")
     parser.add_argument("--commit")

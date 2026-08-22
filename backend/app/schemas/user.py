@@ -34,6 +34,9 @@ def _check_password_complexity(value: str) -> str:
 class UserCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=PASSWORD_MIN, max_length=PASSWORD_MAX)
+    # Nom de l'organisation créée pour ce compte (le premier utilisateur d'une
+    # organisation en devient admin). Optionnel : à défaut, dérivé de l'e-mail.
+    org_name: str | None = Field(default=None, max_length=200)
 
     # La politique est appliquée ICI, côté serveur : la validation du
     # formulaire front n'est qu'un confort, elle se contourne en un curl.
@@ -78,6 +81,7 @@ class UserOut(BaseModel):
     id: int
     email: EmailStr
     name: str | None = None
+    role: str
     created_at: datetime
     mfa_methods: list[str] = []
 

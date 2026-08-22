@@ -8,6 +8,7 @@ from uuid import uuid4
 from sqlalchemy.orm import Session
 
 from app.models.finding import Finding
+from app.models.organization import Organization
 from app.models.project import Project
 from app.models.scan import Scan
 from app.models.user import User
@@ -15,9 +16,12 @@ from app.services.aggregates import severity_counts
 
 
 def _seed_scan(db: Session, severities: list[str]) -> int:
-    """Crée un utilisateur + projet + scan + findings, renvoie l'id du scan."""
+    """Crée une org + utilisateur + projet + scan + findings, renvoie l'id du scan."""
+    org = Organization(name="test-org")
+    db.add(org)
+    db.flush()
     # e-mail et token_hash sont UNIQUE en base : chaque seed a les siens.
-    owner = User(email=f"{uuid4().hex}@test.io", hashed_password="x")
+    owner = User(email=f"{uuid4().hex}@test.io", hashed_password="x", org_id=org.id)
     db.add(owner)
     db.flush()
     project = Project(

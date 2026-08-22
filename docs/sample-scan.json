@@ -7,7 +7,8 @@
     "created_at": "2026-07-14T10:00:00Z",
     "tools": [
       { "name": "gitleaks", "version": "8.18.0" },
-      { "name": "checkov", "version": "3.2.0" }
+      { "name": "checkov", "version": "3.2.0" },
+      { "name": "semgrep", "version": "1.78.0" }
     ]
   },
   "findings": [
@@ -75,6 +76,19 @@
       "line_start": 2,
       "line_end": 7,
       "remediation": "Set encrypted = true on the volume."
+    },
+    {
+      "fingerprint": "demo-0006",
+      "source": "semgrep",
+      "category": "vulnerability",
+      "rule_id": "python.lang.security.audit.dangerous-subprocess-use",
+      "title": "Command injection via subprocess with shell=True",
+      "severity": "high",
+      "resource": null,
+      "file": "app/services/export.py",
+      "line_start": 42,
+      "line_end": 42,
+      "remediation": "Pass the command as an argument list to subprocess.run() instead of using shell=True."
     }
   ]
 }
