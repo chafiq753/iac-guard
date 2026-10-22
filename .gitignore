@@ -32,3 +32,8 @@ conftest.json
 .vscode/
 .idea/
 .DS_Store
+
+# Packaging Python (outil iacguard)
+*.egg-info/
+build/
+dist/

@@ -1,0 +1,9 @@
+# Faux positifs vérifiés à la main (Gitleaks lit ce fichier automatiquement).
+# Format : <commit>:<fichier>:<règle>:<ligne>
+#
+# Faux mot de passe RDS dans les données de démo (finding simulé, pas un vrai secret)
+35f0b056e0be7a9b248e8bcfe78c253c687ea1bd:scripts/seed_demo.py:generic-api-key:160
+# Token de test inventé pour tester l'aperçu tronqué des tokens
+d12824a87253ca1a71d2d99b36d2f2c6d966c098:backend/tests/test_security.py:generic-api-key:37
+# Clé Stripe factice dans un exemple de sortie Gitleaks
+d12824a87253ca1a71d2d99b36d2f2c6d966c098:pipeline/aggregator/samples/gitleaks.json:stripe-access-token:29

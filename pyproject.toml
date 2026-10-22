@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "iacguard"
+dynamic = ["version"]
+description = "Scanner DevSecOps pour Infrastructure as Code : secrets, mauvaises configurations et vulnérabilités dans un seul rapport, avec score et blocage de pull request."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{ name = "Chafiq Boulghallat" }]
+dependencies = ["pydantic>=2.10,<3"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.setuptools.dynamic]
+version = { attr = "iacguard.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["iacguard*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "integration: lance un vrai scanner (sauté s'il n'est pas installé)",
+]
