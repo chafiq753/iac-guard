@@ -168,7 +168,12 @@ def run_checkov(path: Path, *, binary: str = "checkov", timeout: int = DEFAULT_T
     if not exe:
         return _missing(ToolName.CHECKOV, binary)
 
-    cmd = [exe, "-d", str(path), "-o", "json", "--soft-fail"]
+    cmd = [
+        exe, "-d", str(path), "-o", "json", "--soft-fail",
+        # Les secrets sont le travail de Gitleaks (qui lit aussi l'historique
+        # Git). Les laisser à Checkov compterait deux fois le même secret.
+        "--skip-framework", "secrets",
+    ]
     try:
         proc = _run(cmd, timeout)
     except subprocess.TimeoutExpired:

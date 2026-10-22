@@ -1,0 +1,11 @@
+# Configuration Gitleaks du repo iac-guard lui-même (lue automatiquement
+# quand on scanne ce dossier). On garde toutes les règles par défaut.
+[extend]
+useDefault = true
+
+# Fichier de démo volontairement vulnérable : sa fausse clé AWS est là pour
+# que la démo montre un secret détecté. Dans un repo de test où on le copie,
+# il est bien détecté ; dans le repo iac-guard, ce n'est pas une fuite.
+[allowlist]
+description = "Fichiers de démo volontairement vulnérables"
+paths = ['''docs/demo-vulnerable-main\.tf''']

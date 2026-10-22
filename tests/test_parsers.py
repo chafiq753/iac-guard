@@ -26,9 +26,38 @@ def test_checkov_severity_and_lines(checkov_sample) -> None:
     assert set(findings) == {"CKV_AWS_21", "CKV_AWS_23", "CKV_AWS_79"}
     assert findings["CKV_AWS_21"].severity is Severity.LOW
     assert findings["CKV_AWS_79"].severity is Severity.HIGH
-    # Sans sévérité (cas normal hors plateforme Prisma) -> MEDIUM.
-    assert findings["CKV_AWS_23"].severity is Severity.MEDIUM
+    # Sans sévérité Checkov (cas normal hors Prisma) -> table iac-guard :
+    # la description d'une règle de security group est de l'hygiène.
+    assert findings["CKV_AWS_23"].severity is Severity.LOW
     assert (findings["CKV_AWS_21"].line_start, findings["CKV_AWS_21"].line_end) == (12, 18)
+
+
+def _checkov_failed(check_id: str, severity: str | None = None) -> dict:
+    chk = {"check_id": check_id, "check_name": check_id, "file_path": "/main.tf"}
+    if severity:
+        chk["severity"] = severity
+    return {"results": {"failed_checks": [chk]}}
+
+
+def test_checkov_table_severity_when_checkov_gives_none() -> None:
+    (public_bucket,) = parse_checkov(_checkov_failed("CKV_AWS_20"))
+    (admin_policy,) = parse_checkov(_checkov_failed("CKV_AWS_62"))
+    (unknown,) = parse_checkov(_checkov_failed("CKV_AWS_99999"))
+    assert public_bucket.severity is Severity.HIGH
+    assert admin_policy.severity is Severity.CRITICAL
+    assert unknown.severity is Severity.MEDIUM
+
+
+def test_checkov_declared_severity_wins_over_table() -> None:
+    # Avec Prisma, Checkov fournit sa gravité : on la respecte.
+    (f,) = parse_checkov(_checkov_failed("CKV_AWS_20", severity="LOW"))
+    assert f.severity is Severity.LOW
+
+
+def test_checkov_secret_rules_are_critical_secrets() -> None:
+    (f,) = parse_checkov(_checkov_failed("CKV_SECRET_2"))
+    assert f.severity is Severity.CRITICAL
+    assert f.category is Category.SECRET
 
 
 def test_checkov_list_output_is_flattened(checkov_sample) -> None:

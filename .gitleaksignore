@@ -1,5 +1,10 @@
 # Faux positifs vérifiés à la main (Gitleaks lit ce fichier automatiquement).
-# Format : <commit>:<fichier>:<règle>:<ligne>
+# Format : <commit>:<fichier>:<règle>:<ligne> pour le scan de l'historique Git,
+#          <fichier>:<règle>:<ligne> pour le scan des fichiers (--no-git).
+#
+backend/tests/test_security.py:generic-api-key:37
+pipeline/aggregator/samples/gitleaks.json:stripe-access-token:29
+scripts/seed_demo.py:generic-api-key:160
 #
 # Faux mot de passe RDS dans les données de démo (finding simulé, pas un vrai secret)
 35f0b056e0be7a9b248e8bcfe78c253c687ea1bd:scripts/seed_demo.py:generic-api-key:160

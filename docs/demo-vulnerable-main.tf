@@ -15,9 +15,13 @@
 provider "aws" {
   region = "us-east-1"
 
-  # 1) SECRET EN DUR -> Gitleaks doit le détecter (clé d'exemple AWS, inerte).
-  access_key = "AKIAIOSFODNN7EXAMPLE"
-  secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+  # 1) SECRET EN DUR -> Gitleaks le détecte (aws-access-token, critique) et
+  #    Checkov aussi (CKV_AWS_41). Clé FACTICE inventée pour la démo : elle
+  #    n'existe pas chez AWS et ne donne accès à rien.
+  #    Ne pas remettre les clés « ...EXAMPLE » de la doc AWS : Gitleaks les
+  #    ignore volontairement, la démo ne montrerait aucun secret.
+  access_key = "AKIAZ7IACGUARDDEMO42"
+  secret_key = "FAKE-iacguard-demo-secret-not-a-real-key"
 }
 
 # 2) Bucket S3 public en lecture -> CKV_AWS_20

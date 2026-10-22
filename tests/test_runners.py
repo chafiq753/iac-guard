@@ -162,18 +162,38 @@ def test_semgrep_with_local_rules(tmp_path: Path) -> None:
 @needs_checkov
 def test_full_scan_blocks_vulnerable_terraform(tmp_path: Path) -> None:
     shutil.copy(DEMO_TF, tmp_path / "main.tf")
-    (tmp_path / "secrets.tf").write_text(f'token = "{_fake_github_token()}"\n')
 
     result = scan(
         tmp_path,
         tools=[ToolName.GITLEAKS, ToolName.CHECKOV],
-        fail_on="critical",
+        fail_on="high",
     )
     assert not result.failed_tools, [r.message for r in result.failed_tools]
-    assert result.decision.blocked is True          # le secret est critical
+    assert result.decision.blocked is True
     assert result.decision.score.grade == "F"
-    sources = {f.source for f in result.report.findings}
-    assert sources == {ToolName.GITLEAKS, ToolName.CHECKOV}
+
+    by_source = {f.source for f in result.report.findings}
+    assert by_source == {ToolName.GITLEAKS, ToolName.CHECKOV}
+    # La fausse clé AWS de la démo doit être vue par Gitleaks (les clés
+    # « ...EXAMPLE » de la doc AWS, elles, sont ignorées par Gitleaks).
+    assert any(f.rule_id == "aws-access-token" for f in result.report.findings)
+    # Le secret n'est compté qu'une fois : Checkov ne lance plus son
+    # framework « secrets » (doublon avec Gitleaks).
+    assert not any(f.rule_id.startswith("CKV_SECRET_") for f in result.report.findings)
+
+
+@pytest.mark.integration
+@needs_checkov
+def test_demo_blocks_on_high_even_without_secret(tmp_path: Path) -> None:
+    # Sans la table de gravité, tout sortait en MEDIUM et rien ne bloquait.
+    shutil.copy(DEMO_TF, tmp_path / "main.tf")
+    result = scan(tmp_path, tools=[ToolName.CHECKOV], fail_on="high")
+    assert result.decision.blocked is True
+    high_rules = {
+        f.rule_id for f in result.report.findings
+        if f.severity.value in ("high", "critical")
+    }
+    assert {"CKV_AWS_20", "CKV_AWS_24", "CKV_AWS_25", "CKV_AWS_17"} <= high_rules
 
 
 def test_scan_rejects_missing_folder(tmp_path: Path) -> None:

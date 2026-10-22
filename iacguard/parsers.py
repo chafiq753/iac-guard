@@ -1,8 +1,9 @@
 """
 Parsers : un par outil, sortie JSON brute -> list[Finding].
 
-Repris de pipeline/aggregator/aggregator.py sans changement de logique.
-Ces fonctions sont pures (aucun accès disque ni réseau) : on leur donne le
+Repris de pipeline/aggregator/aggregator.py. Seul changement : la gravité
+des règles Checkov vient de la table iac-guard (voir severity.py) au lieu
+d'être MEDIUM pour toutes. Ces fonctions sont pures (aucun accès disque ni réseau) : on leur donne le
 JSON déjà chargé, elles renvoient des findings normalisés.
 """
 
@@ -12,6 +13,7 @@ from collections.abc import Callable
 from typing import Any
 
 from iacguard.schema import Category, Finding, Severity, ToolName
+from iacguard.severity import SECRET_PREFIX, checkov_default_severity
 
 # Sévérité déclarée en toutes lettres (Checkov, metadata Rego, Semgrep) -> enum.
 _SEVERITY_MAP = {
@@ -69,7 +71,9 @@ def parse_checkov(data: Any) -> list[Finding]:
     """
     Checkov (`checkov -o json`) : objet {results: {failed_checks: [...]}}.
     Peut aussi être une liste d'objets (plusieurs frameworks) -> on gère les deux.
-    Sévérité présente seulement si liée à la plateforme Prisma, sinon MEDIUM.
+
+    Gravité : celle de Checkov si présente (plateforme Prisma), sinon la
+    table iac-guard (iacguard/severity.py), sinon MEDIUM.
     """
     if not data:
         return []
@@ -78,14 +82,21 @@ def parse_checkov(data: Any) -> list[Finding]:
     for report in reports:
         failed = (report.get("results") or {}).get("failed_checks") or []
         for chk in failed:
+            check_id = chk.get("check_id", "unknown")
             line_range = chk.get("file_line_range") or [None, None]
             findings.append(
                 Finding(
                     source=ToolName.CHECKOV,
-                    category=Category.MISCONFIGURATION,
-                    rule_id=chk.get("check_id", "unknown"),
+                    category=(
+                        Category.SECRET
+                        if check_id.startswith(SECRET_PREFIX)
+                        else Category.MISCONFIGURATION
+                    ),
+                    rule_id=check_id,
                     title=chk.get("check_name", "Mauvaise configuration"),
-                    severity=_norm_severity(chk.get("severity"), Severity.MEDIUM),
+                    severity=_norm_severity(
+                        chk.get("severity"), checkov_default_severity(check_id)
+                    ),
                     resource=chk.get("resource"),
                     file=chk.get("repo_file_path") or chk.get("file_path"),
                     line_start=line_range[0],
