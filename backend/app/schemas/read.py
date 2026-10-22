@@ -32,6 +32,8 @@ class FindingOut(BaseModel):
     # Statut de triage (décision analyste, suivi par fingerprint).
     status: str = "open"
     triage_note: str | None = None
+    # Couvert par une exception de politique (règle ignorée sur le projet).
+    excepted: bool = False
 
 
 class TriageIn(BaseModel):

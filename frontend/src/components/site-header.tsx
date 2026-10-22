@@ -30,6 +30,7 @@ const PAGE_TITLES: Record<string, { title: string; subtitle: string }> = {
   "/alerts": { title: "Alertes", subtitle: "Toutes les alertes, tous projets confondus" },
   "/security": { title: "Sécurité", subtitle: "Authentification et appareils" },
   "/settings": { title: "Settings", subtitle: "Compte, sécurité, politiques et audit" },
+  "/admin": { title: "Administration", subtitle: "Comptes, rôles et journal d'audit" },
 };
 
 export function SiteHeader() {

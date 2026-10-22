@@ -13,6 +13,7 @@ from datetime import datetime
 from sqlalchemy import DateTime, ForeignKey, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
+from app.db.audit_guard import install_append_only_guard
 from app.db.session import Base
 
 
@@ -20,7 +21,9 @@ class TriageAuditLog(Base):
     __tablename__ = "triage_audit_log"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    project_id: Mapped[int] = mapped_column(ForeignKey("projects.id"), index=True)
+    # PAS de clé étrangère vers `projects` : le journal doit survivre à la
+    # suppression du projet qu'il documente (sinon PostgreSQL refuse le DELETE).
+    project_id: Mapped[int] = mapped_column(index=True)
     # Dénormalisés volontairement : l'audit doit rester lisible ET filtrable
     # par propriétaire même si le projet est supprimé plus tard (un journal
     # d'audit ne doit jamais dépendre de la survie de ce qu'il audite).
@@ -38,3 +41,7 @@ class TriageAuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# Append-only garanti par la base (triggers), pas seulement par l'API.
+install_append_only_guard(TriageAuditLog.__table__)

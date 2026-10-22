@@ -15,6 +15,7 @@ from sqlalchemy import DateTime, ForeignKey, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import JSON
 
+from app.db.audit_guard import install_append_only_guard
 from app.db.session import Base
 
 
@@ -35,3 +36,7 @@ class AdminAuditLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+
+# Append-only garanti par la base (triggers), pas seulement par l'API.
+install_append_only_guard(AdminAuditLog.__table__)

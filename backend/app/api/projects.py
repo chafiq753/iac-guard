@@ -8,16 +8,23 @@ son organisation lui a partagés (voir deps.list_accessible_projects).
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import desc, func, select
+from sqlalchemy import delete, desc, func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_accessible_project, get_current_user, list_accessible_projects
+from app.api.deps import (
+    get_accessible_project,
+    get_current_user,
+    list_accessible_projects,
+    require_role,
+)
 from app.core.security import generate_project_token, hash_token, token_preview
 from app.db.session import get_db
 from app.models.ignored_rule import IgnoredRule
 from app.models.project import Project
+from app.models.project_access import ProjectAccess
 from app.models.scan import Scan
+from app.models.triage import FindingTriage
 from app.models.user import User
 from app.schemas.project import (
     IgnoredRuleCreate,
@@ -29,6 +36,7 @@ from app.schemas.project import (
     ScanPolicyUpdate,
 )
 from app.schemas.read import ProjectDetail, ProjectTokenRotated, ScoreOut
+from app.services.admin_audit import log_admin_action
 from app.services.aggregates import ignored_rule_ids, severity_counts
 from app.services.scoring import compute_score
 
@@ -122,7 +130,13 @@ def delete_project(
 
     Irréversible : le token cesse aussitôt de fonctionner. Le dashboard doit
     faire confirmer cette action avant d'appeler cette route.
+
+    Les journaux d'audit, eux, sont conservés (dénormalisés, sans clé
+    étrangère vers le projet) : ils restent lisibles après la suppression.
     """
+    # Tables liées sans cascade ORM : à vider avant, sinon PostgreSQL refuse.
+    db.execute(delete(FindingTriage).where(FindingTriage.project_id == project.id))
+    db.execute(delete(ProjectAccess).where(ProjectAccess.project_id == project.id))
     db.delete(project)
     db.commit()
 
@@ -170,6 +184,8 @@ def get_policy(
 def update_policy(
     payload: ScanPolicyUpdate,
     project: Project = Depends(get_accessible_project),
+    # Baisser le seuil débloquerait une PR : décision réservée à la sécurité.
+    _: User = Depends(require_role("admin", "security_lead")),
     db: Session = Depends(get_db),
 ) -> ScanPolicyOut:
     """Change le seuil de blocage du pipeline (null = ne jamais bloquer)."""
@@ -184,7 +200,8 @@ def update_policy(
 def add_ignored_rule(
     payload: IgnoredRuleCreate,
     project: Project = Depends(get_accessible_project),
-    current_user: User = Depends(get_current_user),
+    # Accepter un risque est une décision de sécurité : admin / security_lead.
+    current_user: User = Depends(require_role("admin", "security_lead")),
     db: Session = Depends(get_db),
 ) -> IgnoredRule:
     """Accepte une règle comme risque connu : elle ne compte plus dans le
@@ -209,6 +226,17 @@ def add_ignored_rule(
         created_by_id=current_user.id,
     )
     db.add(rule)
+    log_admin_action(
+        db,
+        actor=current_user,
+        action="policy.exception_added",
+        details={
+            "project_id": project.id,
+            "project_name": project.name,
+            "rule_id": rule.rule_id,
+            "note": rule.note,
+        },
+    )
     db.commit()
     db.refresh(rule)
     return rule
@@ -218,11 +246,25 @@ def add_ignored_rule(
 def remove_ignored_rule(
     ignored_rule_id: int,
     project: Project = Depends(get_accessible_project),
+    current_user: User = Depends(require_role("admin", "security_lead")),
     db: Session = Depends(get_db),
 ) -> None:
     """Ré-active la règle : ses findings recomptent dans le score."""
     rule = db.get(IgnoredRule, ignored_rule_id)
     if rule is None or rule.project_id != project.id:
         raise HTTPException(status_code=404, detail="Exception introuvable.")
+    log_admin_action(
+        db,
+        actor=current_user,
+        action="policy.exception_removed",
+        # La justification d'origine est recopiée : la ligne `ignored_rules`
+        # disparaît, l'audit doit rester complet sans elle.
+        details={
+            "project_id": project.id,
+            "project_name": project.name,
+            "rule_id": rule.rule_id,
+            "note": rule.note,
+        },
+    )
     db.delete(rule)
     db.commit()

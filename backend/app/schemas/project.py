@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # Valeurs acceptées pour la politique de blocage du pipeline.
 FAIL_SEVERITY_CHOICES = ("critical", "high", "medium", "low", "info")
@@ -48,7 +48,17 @@ class IgnoredRuleOut(BaseModel):
 
 class IgnoredRuleCreate(BaseModel):
     rule_id: str
-    note: str | None = None
+    # Obligatoire : un auditeur externe doit pouvoir comprendre pourquoi un
+    # risque a été accepté.
+    note: str = Field(max_length=2000)
+
+    @field_validator("note")
+    @classmethod
+    def _note_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("La justification de l'exception est obligatoire.")
+        return cleaned
 
     @field_validator("rule_id")
     @classmethod

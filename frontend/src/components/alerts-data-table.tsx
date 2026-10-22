@@ -40,7 +40,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SeverityBadge, StatusBadge } from "@/components/severity-badge";
+import { ExceptionBadge, SeverityBadge, StatusBadge } from "@/components/severity-badge";
 import { cn } from "@/lib/utils";
 import type { Alert, AlertStatus } from "@/lib/data";
 
@@ -103,8 +103,11 @@ const makeColumns = (
       // Largeur bornée + troncature : les titres longs (Gitleaks est verbeux)
       // ne doivent pas pousser les colonnes suivantes hors de l'écran.
       <div className="flex max-w-[13rem] min-w-0 flex-col lg:max-w-[18rem] xl:max-w-[19rem] 2xl:max-w-[30rem]">
-        <span className="truncate font-medium" title={row.getValue("title")}>
-          {row.getValue("title")}
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate font-medium" title={row.getValue("title")}>
+            {row.getValue("title")}
+          </span>
+          {row.original.excepted ? <ExceptionBadge className="shrink-0" /> : null}
         </span>
         <span
           className="truncate text-xs text-muted-foreground"
@@ -176,6 +179,9 @@ const makeColumns = (
           }
         />
         <DropdownMenuContent align="end" className="w-48">
+          {/* Sans droit de triage (auditor / viewer), pas d'entrées de triage. */}
+          {onTriage ? (
+          <>
           <DropdownMenuLabel>Triage</DropdownMenuLabel>
           {row.original.status === "open" ? (
             <>
@@ -210,6 +216,8 @@ const makeColumns = (
             </>
           )}
           <DropdownMenuSeparator />
+          </>
+          ) : null}
           <DropdownMenuItem
             onClick={() => navigator.clipboard?.writeText(row.original.id)}
           >

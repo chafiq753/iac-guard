@@ -108,7 +108,7 @@ def test_ignored_rule_excluded_from_score(
 
     client.post(
         f"/api/projects/{project_id}/ignored-rules",
-        json={"rule_id": critical_rule},
+        json={"rule_id": critical_rule, "note": "Risque accepté"},
         headers=auth_headers,
     )
     after = client.get(f"/api/scans/{scan['scan_id']}", headers=auth_headers).json()
@@ -120,7 +120,7 @@ def test_duplicate_ignored_rule_rejected(
     client: TestClient, auth_headers: dict[str, str], project_token: tuple[int, str]
 ) -> None:
     project_id, _ = project_token
-    payload = {"rule_id": "CKV_AWS_20"}
+    payload = {"rule_id": "CKV_AWS_20", "note": "Bucket CDN public"}
     assert (
         client.post(
             f"/api/projects/{project_id}/ignored-rules",
@@ -146,7 +146,7 @@ def test_remove_ignored_rule_restores_score(
 
     added = client.post(
         f"/api/projects/{project_id}/ignored-rules",
-        json={"rule_id": critical_rule},
+        json={"rule_id": critical_rule, "note": "Risque accepté"},
         headers=auth_headers,
     ).json()
     ignored_score = client.get(

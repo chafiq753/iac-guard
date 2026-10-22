@@ -24,7 +24,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/components/auth-provider";
 import { ApiError } from "@/lib/auth-api";
+import { canManagePolicy } from "@/lib/permissions";
 import { platformApi, type ProjectOut, type ScanPolicyOut } from "@/lib/platform-api";
 
 const SEVERITY_LABELS: Record<string, string> = {
@@ -39,6 +41,9 @@ const NONE = "none";
 
 /** Onglet « Politiques de scan » : seuil de blocage + exceptions, par projet. */
 export function ScanPolicyManager() {
+  // Seuil et exceptions : admin / security_lead (les autres rôles lisent).
+  const { user } = useAuth();
+  const policyAllowed = canManagePolicy(user?.role);
   const [projects, setProjects] = React.useState<ProjectOut[] | null>(null);
   const [selectedId, setSelectedId] = React.useState<number | null>(null);
   const [policy, setPolicy] = React.useState<ScanPolicyOut | null>(null);
@@ -87,10 +92,10 @@ export function ScanPolicyManager() {
 
   async function onAddRule(e: React.FormEvent) {
     e.preventDefault();
-    if (selectedId === null || !newRuleId.trim()) return;
+    if (selectedId === null || !newRuleId.trim() || !newRuleNote.trim()) return;
     setAddingRule(true);
     try {
-      await platformApi.addIgnoredRule(selectedId, newRuleId.trim(), newRuleNote.trim() || undefined);
+      await platformApi.addIgnoredRule(selectedId, newRuleId.trim(), newRuleNote.trim());
       setNewRuleId("");
       setNewRuleNote("");
       void loadPolicy(selectedId);
@@ -173,7 +178,7 @@ export function ScanPolicyManager() {
               <Select
                 value={policy.fail_on_severity ?? NONE}
                 onValueChange={onThresholdChange}
-                disabled={savingThreshold}
+                disabled={savingThreshold || !policyAllowed}
                 items={{
                   [NONE]: "Ne jamais bloquer",
                   critical: "Critique",
@@ -206,6 +211,7 @@ export function ScanPolicyManager() {
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5 pt-2">
+              {policyAllowed ? (
               <form onSubmit={onAddRule} className="flex flex-wrap items-end gap-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="rule-id" className="text-xs">
@@ -221,17 +227,18 @@ export function ScanPolicyManager() {
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="rule-note" className="text-xs">
-                    Justification (optionnel)
+                    Justification (obligatoire)
                   </Label>
                   <Input
                     id="rule-note"
                     placeholder="ex. Bucket public volontaire (CDN)"
                     value={newRuleNote}
                     onChange={(e) => setNewRuleNote(e.target.value)}
+                    required
                     className="w-64"
                   />
                 </div>
-                <Button type="submit" disabled={addingRule || !newRuleId.trim()}>
+                <Button type="submit" disabled={addingRule || !newRuleId.trim() || !newRuleNote.trim()}>
                   {addingRule ? (
                     <Loader2 className="size-4 animate-spin" />
                   ) : (
@@ -240,6 +247,12 @@ export function ScanPolicyManager() {
                   Ajouter
                 </Button>
               </form>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Lecture seule : seuls les administrateurs et responsables
+                  sécurité modifient la politique et les exceptions.
+                </p>
+              )}
 
               {policy.ignored_rules.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
@@ -262,6 +275,7 @@ export function ScanPolicyManager() {
                           </span>
                         ) : null}
                       </div>
+                      {policyAllowed ? (
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -270,6 +284,7 @@ export function ScanPolicyManager() {
                       >
                         <Trash2 className="size-4 text-destructive" />
                       </Button>
+                      ) : null}
                     </div>
                   ))}
                 </div>

@@ -75,6 +75,8 @@ export interface FindingOut {
   /** Statut de triage : open, acknowledged, resolved, false_positive. */
   status: string;
   triage_note: string | null;
+  /** Couvert par une exception de politique (règle ignorée du projet). */
+  excepted: boolean;
 }
 
 /** Une alerte enrichie du projet auquel elle appartient (vue cross-projets). */

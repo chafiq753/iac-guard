@@ -16,6 +16,7 @@ from app.api.deps import (
     get_accessible_scan,
     get_current_user,
     list_accessible_projects,
+    require_role,
 )
 from app.db.session import get_db
 from app.models.audit_log import TriageAuditLog
@@ -172,6 +173,7 @@ def list_alerts(
             stmt = stmt.where(Finding.category == category)
 
         triage = _triage_map(db, project.id)
+        excepted = ignored_rule_ids(db, project.id)
         for f in db.scalars(stmt).all():
             decision = triage.get(f.fingerprint)
             item_status = decision.status if decision else "open"
@@ -187,6 +189,7 @@ def list_alerts(
             base.update(
                 status=item_status,
                 triage_note=decision.note if decision else None,
+                excepted=f.rule_id in excepted,
             )
             rows.append(
                 FindingWithProject(
@@ -252,6 +255,7 @@ def list_findings(
         stmt = stmt.where(Finding.category == category)
 
     triage = _triage_map(db, scan.project_id)
+    excepted = ignored_rule_ids(db, scan.project_id)
     out: list[FindingOut] = []
     for f in db.scalars(stmt).all():
         decision = triage.get(f.fingerprint)
@@ -259,6 +263,7 @@ def list_findings(
             update={
                 "status": decision.status if decision else "open",
                 "triage_note": decision.note if decision else None,
+                "excepted": f.rule_id in excepted,
             }
         )
         if status and item.status != status:
@@ -272,7 +277,9 @@ def triage_finding(
     finding_id: int,
     payload: TriageIn,
     scan: Scan = Depends(get_accessible_scan),
-    current_user: User = Depends(get_current_user),
+    # auditor / viewer : lecture seule (403). Le developer ne trie que les
+    # projets qui lui sont accessibles — garanti par get_accessible_scan (404).
+    current_user: User = Depends(require_role("admin", "security_lead", "developer")),
     db: Session = Depends(get_db),
 ) -> FindingOut:
     """Enregistre la décision d'un analyste sur un finding (par fingerprint)."""
@@ -320,7 +327,9 @@ def triage_finding(
             db.delete(decision)
         _log_change()
         db.commit()
-        return FindingOut.model_validate(finding)
+        return FindingOut.model_validate(finding).model_copy(
+            update={"excepted": finding.rule_id in ignored_rule_ids(db, scan.project_id)}
+        )
 
     if decision is None:
         decision = FindingTriage(
@@ -334,5 +343,9 @@ def triage_finding(
     db.commit()
 
     return FindingOut.model_validate(finding).model_copy(
-        update={"status": decision.status, "triage_note": decision.note}
+        update={
+            "status": decision.status,
+            "triage_note": decision.note,
+            "excepted": finding.rule_id in ignored_rule_ids(db, scan.project_id),
+        }
     )

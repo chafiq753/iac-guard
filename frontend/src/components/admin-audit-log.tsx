@@ -59,6 +59,9 @@ function describeDetails(entry: AdminAuditLogEntry): string {
       ? "Tous les accès révoqués"
       : `${ids.length} projet${ids.length > 1 ? "s" : ""} accessible${ids.length > 1 ? "s" : ""}`;
   }
+  if (entry.action === "policy.exception_added" || entry.action === "policy.exception_removed") {
+    return `${String(d.project_name)} · ${String(d.rule_id)} — ${String(d.note ?? "")}`;
+  }
   return "—";
 }
 

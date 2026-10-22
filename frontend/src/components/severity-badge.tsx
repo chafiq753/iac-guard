@@ -12,6 +12,19 @@ const severityStyles: Record<Severity, string> = {
   info: "bg-muted text-muted-foreground",
 };
 
+/** Finding couvert par une exception de politique (règle ignorée). */
+export function ExceptionBadge({ className }: { className?: string }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn("border-violet-500/40 text-violet-700 dark:text-violet-300", className)}
+      title="Couvert par une exception : exclu du score et du seuil de blocage"
+    >
+      Exception
+    </Badge>
+  );
+}
+
 export function SeverityBadge({
   severity,
   className,

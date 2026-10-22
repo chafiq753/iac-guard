@@ -1,0 +1,3055 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>iac-guard — Documentation complète</title>
+<style>
+@page { size: A4; }
+
+* { box-sizing: border-box; }
+
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Inter", system-ui, -apple-system, Arial, sans-serif;
+  font-size: 10pt;
+  line-height: 1.55;
+  color: #26323f;
+  font-feature-settings: "kern" 1, "liga" 1;
+}
+
+/* --- Couverture -------------------------------------------------------- */
+
+.couverture {
+  min-height: 238mm;
+  background: linear-gradient(160deg, #0d1b26 0%, #123243 62%, #0b5d7a 100%);
+  color: #ffffff;
+  padding: 26mm 20mm 18mm 20mm;
+  display: flex;
+  flex-direction: column;
+  page-break-after: always;
+}
+
+.couverture .marque {
+  font-size: 8.5pt;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: #74c2dd;
+  margin-bottom: auto;
+}
+
+.couverture h1 {
+  font-size: 40pt;
+  line-height: 1.02;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 2mm 0;
+  padding: 0;
+  border: 0;
+  color: #ffffff;
+  page-break-before: auto;
+}
+
+.couverture .sous-titre {
+  font-size: 17pt;
+  font-weight: 300;
+  color: #9fd2e5;
+  margin: 0 0 8mm 0;
+}
+
+.couverture .filet {
+  width: 54mm;
+  height: 3px;
+  background: #f0a04b;
+  margin: 0 0 8mm 0;
+}
+
+.couverture .baseline {
+  font-size: 11pt;
+  line-height: 1.6;
+  color: #cfe3ec;
+  max-width: 120mm;
+  margin: 0 0 14mm 0;
+}
+
+.couverture .meta {
+  border-top: 1px solid rgba(255,255,255,0.18);
+  padding-top: 6mm;
+  font-size: 8.8pt;
+  color: #b7d2de;
+}
+.couverture .meta table { width: 100%; border-collapse: collapse; }
+.couverture .meta td {
+  border: 0;
+  padding: 1.6mm 0;
+  vertical-align: top;
+  background: none;
+}
+.couverture .meta td:first-child {
+  width: 42mm;
+  color: #7fb4c9;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 7.4pt;
+  padding-top: 2.1mm;
+}
+.couverture .meta strong { color: #ffffff; font-weight: 600; }
+
+/* --- Sommaire ---------------------------------------------------------- */
+
+.sommaire { page-break-after: always; }
+
+.sommaire > h2 {
+  font-size: 15pt;
+  color: #0d1b26;
+  border-bottom: 2px solid #0b5d7a;
+  padding-bottom: 3mm;
+  margin: 0 0 7mm 0;
+}
+
+.sommaire .toc > ul { list-style: none; margin: 0; padding: 0; }
+
+.sommaire .toc > ul > li {
+  margin: 0 0 1.5mm 0;
+  padding: 2.2mm 0 2.2mm 0;
+  border-bottom: 1px solid #eef2f5;
+}
+
+.sommaire .toc > ul > li > a {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #0d1b26;
+  text-decoration: none;
+}
+
+.sommaire .toc ul ul {
+  list-style: none;
+  margin: 1.6mm 0 0 0;
+  padding: 0 0 0 6mm;
+  column-count: 2;
+  column-gap: 8mm;
+}
+
+.sommaire .toc ul ul li { margin: 0 0 0.9mm 0; break-inside: avoid; }
+
+.sommaire .toc ul ul a {
+  font-size: 8.6pt;
+  color: #5f7183;
+  text-decoration: none;
+}
+
+.sommaire .toc ul ul ul { display: none; }
+
+/* --- Corps ------------------------------------------------------------- */
+
+.corps { padding-top: 0; }
+
+h1 {
+  font-size: 21pt;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  color: #0d1b26;
+  margin: 0 0 6mm 0;
+  padding-top: 6mm;
+  border-top: 3px solid #0b5d7a;
+  page-break-before: always;
+  break-after: avoid;
+}
+
+.corps > h2:first-child, .corps > h1:first-child { page-break-before: avoid; }
+
+h2 {
+  font-size: 13pt;
+  font-weight: 650;
+  color: #0d1b26;
+  margin: 9mm 0 3.5mm 0;
+  padding-bottom: 1.6mm;
+  border-bottom: 1px solid #dde5eb;
+  break-after: avoid;
+}
+
+h3 {
+  font-size: 10.6pt;
+  font-weight: 650;
+  color: #0b5d7a;
+  margin: 6mm 0 2mm 0;
+  break-after: avoid;
+}
+
+h4 {
+  font-size: 10pt;
+  font-weight: 650;
+  color: #26323f;
+  margin: 4mm 0 1.5mm 0;
+  break-after: avoid;
+}
+
+p { margin: 0 0 3mm 0; orphans: 3; widows: 3; }
+
+strong { font-weight: 650; color: #16232f; }
+
+a { color: #0b5d7a; text-decoration: none; }
+
+ul, ol { margin: 0 0 3.5mm 0; padding-left: 6mm; }
+li { margin-bottom: 1.2mm; }
+
+/* Les séparateurs `---` ne servent qu'à structurer la source : les sauts de
+   page des titres suffisent, un filet en bas de page ferait accident. */
+hr { display: none; }
+
+/* --- Tableaux ---------------------------------------------------------- */
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 3mm 0 5mm 0;
+  font-size: 8.8pt;
+  line-height: 1.42;
+}
+
+thead { display: table-header-group; }
+
+th {
+  background: #eef4f7;
+  color: #0d1b26;
+  text-align: left;
+  font-weight: 650;
+  font-size: 7.8pt;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  padding: 2.2mm 2.6mm;
+  border-bottom: 1.5px solid #b9d2dd;
+}
+
+td {
+  padding: 2mm 2.6mm;
+  border-bottom: 1px solid #e8edf1;
+  vertical-align: top;
+}
+
+tbody tr:nth-child(even) td { background: #fafcfd; }
+
+tr { break-inside: avoid; }
+
+/* --- Code -------------------------------------------------------------- */
+
+pre {
+  background: #f6f9fb;
+  border-left: 3px solid #0b5d7a;
+  border-radius: 0 3px 3px 0;
+  padding: 3mm 4mm;
+  margin: 3mm 0 5mm 0;
+  overflow: hidden;
+  break-inside: avoid;
+}
+
+pre code {
+  font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+  font-size: 7.8pt;
+  line-height: 1.4;
+  color: #1d2b38;
+  white-space: pre;
+  background: none;
+  padding: 0;
+  border: 0;
+}
+
+code {
+  font-family: Consolas, "Cascadia Mono", "SFMono-Regular", monospace;
+  font-size: 8.6pt;
+  background: #eef2f6;
+  color: #0f3b4d;
+  padding: 0.3mm 1.1mm;
+  border-radius: 2px;
+}
+
+th code, td code { font-size: 7.9pt; }
+
+/* --- Citations --------------------------------------------------------- */
+
+blockquote {
+  margin: 3mm 0 4mm 0;
+  padding: 0.5mm 0 0.5mm 5mm;
+  border-left: 3px solid #cbd9e2;
+  color: #55677a;
+  font-style: italic;
+}
+
+blockquote p { margin-bottom: 1.5mm; }
+blockquote strong { color: #26323f; }
+</style>
+</head>
+<body>
+
+<section class="couverture">
+  <div class="marque">Sécurité de l'Infrastructure as Code</div>
+  <h1>iac-guard</h1>
+  <div class="sous-titre">Documentation complète</div>
+  <div class="filet"></div>
+  <p class="baseline">Fonctionnement de bout en bout, protocoles, outils, algorithmes, méthode de travail et procédures opérationnelles.</p>
+  <div class="meta">
+    <table>
+      <tr><td>Dépôt</td><td><strong>ZenithSoft / iac-guard</strong> — branche <strong>main</strong></td></tr>
+      <tr><td>État décrit</td><td>commit <strong>a2854f1</strong> — « Refuser le démarrage en production avec une configuration dangereuse »</td></tr>
+      <tr><td>Date</td><td><strong>15 septembre 2026</strong></td></tr>
+      <tr><td>Vérification</td><td>Chiffres relus dans le code &middot; suite de tests exécutée : <strong>151 cas passants, 0 échec</strong></td></tr>
+    </table>
+  </div>
+</section>
+
+<section class="sommaire">
+  <h2>Sommaire</h2>
+  <div class="toc">
+<ul>
+<li><a href="#carte-des-documents">Carte des documents</a></li>
+<li><a href="#1-le-produit-en-une-page">1. Le produit en une page</a></li>
+<li><a href="#2-fonctionnement-de-bout-en-bout">2. Fonctionnement de bout en bout</a><ul>
+<li><a href="#21-le-schema-general">2.1 Le schéma général</a></li>
+<li><a href="#22-le-cycle-de-vie-dun-scan-etape-par-etape">2.2 Le cycle de vie d'un scan, étape par étape</a></li>
+<li><a href="#23-le-parcours-dun-etre-humain">2.3 Le parcours d'un être humain</a></li>
+</ul>
+</li>
+<li><a href="#3-les-outils-de-la-chaine">3. Les outils de la chaîne</a><ul>
+<li><a href="#31-les-scanners-executes-dans-le-pipeline-chez-le-client">3.1 Les scanners (exécutés dans le pipeline, chez le client)</a></li>
+<li><a href="#32-le-socle-backend">3.2 Le socle backend</a></li>
+<li><a href="#33-le-socle-frontend">3.3 Le socle frontend</a></li>
+<li><a href="#34-infrastructure-et-outillage">3.4 Infrastructure et outillage</a></li>
+</ul>
+</li>
+<li><a href="#4-les-protocoles">4. Les protocoles</a><ul>
+<li><a href="#41-http-rest-le-transport-de-tout">4.1 HTTP / REST — le transport de tout</a></li>
+<li><a href="#42-bearer-token-lauthentification-du-pipeline">4.2 Bearer token — l'authentification du pipeline</a></li>
+<li><a href="#43-jwt-json-web-token-la-session-humaine">4.3 JWT (JSON Web Token) — la session humaine</a></li>
+<li><a href="#44-cookies-le-stockage-de-la-session">4.4 Cookies — le stockage de la session</a></li>
+<li><a href="#45-cors-qui-a-le-droit-de-parler-a-lapi">4.5 CORS — qui a le droit de parler à l'API</a></li>
+<li><a href="#46-webauthn-fido2-la-biometrie-et-les-cles-de-securite">4.6 WebAuthn / FIDO2 — la biométrie et les clés de sécurité</a></li>
+<li><a href="#47-totp-rfc-6238">4.7 TOTP — RFC 6238</a></li>
+<li><a href="#48-hachage-et-empreintes-quel-algorithme-pour-quoi">4.8 Hachage et empreintes — quel algorithme, pour quoi</a></li>
+<li><a href="#49-le-contrat-pipeline-api-le-schema-unifie-v10">4.9 Le contrat pipeline → API : le schéma unifié v1.0</a></li>
+<li><a href="#410-smtp-lexception-qui-nen-est-pas-une">4.10 SMTP — l'exception qui n'en est pas une</a></li>
+<li><a href="#411-acces-base-de-donnees">4.11 Accès base de données</a></li>
+</ul>
+</li>
+<li><a href="#5-architecture-logicielle">5. Architecture logicielle</a><ul>
+<li><a href="#51-arborescence-commentee">5.1 Arborescence commentée</a></li>
+<li><a href="#52-les-couches-du-backend-et-leurs-responsabilites">5.2 Les couches du backend et leurs responsabilités</a></li>
+<li><a href="#53-les-trois-circuits-dauthentification">5.3 Les trois circuits d'authentification</a></li>
+</ul>
+</li>
+<li><a href="#6-modele-de-donnees">6. Modèle de données</a><ul>
+<li><a href="#61-table-par-table">6.1 Table par table</a></li>
+</ul>
+</li>
+<li><a href="#7-lapi-route-par-route">7. L'API, route par route</a><ul>
+<li><a href="#71-meta">7.1 Méta</a></li>
+<li><a href="#72-authentification-apiauth-10-routes">7.2 Authentification — /api/auth (10 routes)</a></li>
+<li><a href="#73-double-authentification-apiauth2fa-12-routes">7.3 Double authentification — /api/auth/2fa (12 routes)</a></li>
+<li><a href="#74-projets-apiprojects-9-routes">7.4 Projets — /api/projects (9 routes)</a></li>
+<li><a href="#75-ingestion-1-route">7.5 Ingestion (1 route)</a></li>
+<li><a href="#76-lecture-scans-alertes-audit-6-routes">7.6 Lecture — scans, alertes, audit (6 routes)</a></li>
+<li><a href="#77-administration-apiadmin-9-routes">7.7 Administration — /api/admin (9 routes)</a></li>
+</ul>
+</li>
+<li><a href="#8-le-tableau-de-bord">8. Le tableau de bord</a><ul>
+<li><a href="#81-les-9-routes-de-lapplication">8.1 Les 9 routes de l'application</a></li>
+<li><a href="#82-les-composants-metier-notables">8.2 Les composants métier notables</a></li>
+<li><a href="#83-les-modules-lib">8.3 Les modules lib/</a></li>
+<li><a href="#84-le-panneau-de-detail-dun-finding">8.4 Le panneau de détail d'un finding</a></li>
+</ul>
+</li>
+<li><a href="#9-les-algorithmes-et-regles-metier">9. Les algorithmes et règles métier</a><ul>
+<li><a href="#91-lempreinte-stable-fingerprint">9.1 L'empreinte stable (fingerprint)</a></li>
+<li><a href="#92-le-score-de-conformite">9.2 Le score de conformité</a></li>
+<li><a href="#93-la-vue-dernier-etat">9.3 La vue « dernier état »</a></li>
+<li><a href="#94-la-politique-de-blocage">9.4 La politique de blocage</a></li>
+<li><a href="#95-le-rbac-a-cinq-roles">9.5 Le RBAC à cinq rôles</a></li>
+<li><a href="#96-les-regles-de-protection-des-comptes">9.6 Les règles de protection des comptes</a></li>
+<li><a href="#97-le-triage">9.7 Le triage</a></li>
+<li><a href="#98-anti-force-brute-et-anti-enumeration">9.8 Anti-force brute et anti-énumération</a></li>
+<li><a href="#99-les-garde-fous-de-demarrage-en-production">9.9 Les garde-fous de démarrage en production</a></li>
+</ul>
+</li>
+<li><a href="#10-securite-menace-par-menace">10. Sécurité : menace par menace</a><ul>
+<li><a href="#101-ce-quil-faut-annoncer-comme-limites">10.1 Ce qu'il faut annoncer comme limites</a></li>
+</ul>
+</li>
+<li><a href="#11-la-methode-de-travail">11. La méthode de travail</a><ul>
+<li><a href="#111-le-principe-directeur-le-code-explique-ses-decisions">11.1 Le principe directeur : le code explique ses décisions</a></li>
+<li><a href="#112-conventions-de-code">11.2 Conventions de code</a></li>
+<li><a href="#113-les-arbitrages-dingenierie-et-leur-logique">11.3 Les arbitrages d'ingénierie, et leur logique</a></li>
+<li><a href="#114-la-strategie-de-test">11.4 La stratégie de test</a></li>
+<li><a href="#115-la-methode-de-documentation">11.5 La méthode de documentation</a></li>
+<li><a href="#116-le-cycle-de-developpement-observable">11.6 Le cycle de développement observable</a></li>
+</ul>
+</li>
+<li><a href="#12-procedures-operationnelles">12. Procédures opérationnelles</a><ul>
+<li><a href="#121-installer-lenvironnement-de-developpement">12.1 Installer l'environnement de développement</a></li>
+<li><a href="#122-developper-sans-docker">12.2 Développer sans Docker</a></li>
+<li><a href="#123-connecter-un-depot-client">12.3 Connecter un dépôt client</a></li>
+<li><a href="#124-faire-tourner-un-jeton-de-projet">12.4 Faire tourner un jeton de projet</a></li>
+<li><a href="#125-inviter-un-collaborateur">12.5 Inviter un collaborateur</a></li>
+<li><a href="#126-donner-acces-a-un-projet">12.6 Donner accès à un projet</a></li>
+<li><a href="#127-traiter-une-alerte">12.7 Traiter une alerte</a></li>
+<li><a href="#128-deployer-en-production">12.8 Déployer en production</a></li>
+<li><a href="#129-sauvegarder-et-restaurer">12.9 Sauvegarder et restaurer</a></li>
+<li><a href="#1210-diagnostiquer-une-panne">12.10 Diagnostiquer une panne</a></li>
+</ul>
+</li>
+<li><a href="#13-tests">13. Tests</a><ul>
+<li><a href="#131-resultat">13.1 Résultat</a></li>
+<li><a href="#132-infrastructure">13.2 Infrastructure</a></li>
+<li><a href="#133-repartition">13.3 Répartition</a></li>
+<li><a href="#134-ce-qui-nest-pas-couvert">13.4 Ce qui n'est pas couvert</a></li>
+</ul>
+</li>
+<li><a href="#14-configuration-de-reference">14. Configuration de référence</a><ul>
+<li><a href="#141-backend-classe-settings">14.1 Backend — classe Settings</a></li>
+<li><a href="#142-frontend">14.2 Frontend</a></li>
+<li><a href="#143-ports-et-reseau">14.3 Ports et réseau</a></li>
+</ul>
+</li>
+<li><a href="#15-limites-connues-et-suite">15. Limites connues et suite</a><ul>
+<li><a href="#151-travaux-en-cours-annonces-par-le-readme">15.1 Travaux en cours annoncés par le README</a></li>
+<li><a href="#152-autres-elements-incomplets-identifies-dans-le-code">15.2 Autres éléments incomplets identifiés dans le code</a></li>
+<li><a href="#153-limites-techniques-structurelles">15.3 Limites techniques structurelles</a></li>
+<li><a href="#154-ordre-de-priorite-suggere">15.4 Ordre de priorité suggéré</a></li>
+</ul>
+</li>
+<li><a href="#16-glossaire">16. Glossaire</a></li>
+</ul>
+</div>
+
+</section>
+
+<section class="corps">
+<h2 id="carte-des-documents">Carte des documents</h2>
+<p>Ce dépôt contient cinq documents. Ils ne se remplacent pas, ils s'emboîtent :</p>
+<table>
+<thead>
+<tr>
+<th>Document</th>
+<th>Répond à la question</th>
+<th>Public</th>
+<th>Taille</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>README.md</code></td>
+<td>« Comment je le lance ? »</td>
+<td>Développeur qui découvre le dépôt</td>
+<td>175 lignes</td>
+</tr>
+<tr>
+<td><code>PRESENTATION_PROJET.md</code></td>
+<td>« Pourquoi ce produit existe, que promet-il ? »</td>
+<td>Jury, client, chef de projet</td>
+<td>480 lignes</td>
+</tr>
+<tr>
+<td><code>PROJECT_ANALYSIS.md</code></td>
+<td>« Qu'y a-t-il exactement dans le code ? »</td>
+<td>Relecteur technique, auditeur</td>
+<td>1 476 lignes</td>
+</tr>
+<tr>
+<td><code>SYNTHESE_ANALYSE.md</code></td>
+<td>« Comment cette analyse a-t-elle été faite ? »</td>
+<td>Encadrant, correcteur</td>
+<td>114 lignes</td>
+</tr>
+<tr>
+<td><strong><code>DOCUMENTATION_COMPLETE.md</code></strong> <em>(ce fichier)</em></td>
+<td><strong>« Comment ça marche, avec quels protocoles, quels outils, et comment on travaille dessus ? »</strong></td>
+<td>Toute personne qui doit reprendre, exploiter ou évaluer le projet</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<p>Documents annexes, dans <code>docs/</code> :</p>
+<ul>
+<li><code>docs/speech-presentation.md</code> — texte de présentation orale (~1 min 30).</li>
+<li><code>docs/script-video-demo.md</code> — script minuté d'une démonstration de 5 minutes.</li>
+<li><code>docs/demo-vulnerable-main.tf</code> — code Terraform volontairement vulnérable (14 ressources) servant de cible de test.</li>
+<li><code>docs/sample-scan.json</code> — exemple de rapport au schéma unifié.</li>
+</ul>
+<hr />
+<h1 id="1-le-produit-en-une-page">1. Le produit en une page</h1>
+<p><strong>iac-guard est un contrôle de sécurité automatique posé entre le développeur et la production.</strong></p>
+<p>Une équipe décrit son infrastructure en code (Terraform). Ce code part en production sans relecture sécurité. Trois familles de défauts passent alors :</p>
+<ol>
+<li><strong>des secrets commités</strong> — un mot de passe de base, une clé d'API — qui restent dans l'historique Git pour toujours ;</li>
+<li><strong>des ressources mal configurées</strong> — stockage public, base non chiffrée, port d'administration ouvert sur Internet ;</li>
+<li><strong>des vulnérabilités applicatives</strong> — injection SQL, injection de commande.</li>
+</ol>
+<p>Des analyseurs existent pour chacune. Le problème n'est pas leur absence : c'est que <strong>personne ne les lance</strong>, qu'ils <strong>produisent trois formats incompatibles</strong>, et qu'ils <strong>n'empêchent rien</strong>.</p>
+<p>iac-guard répond en cinq gestes :</p>
+<table>
+<thead>
+<tr>
+<th>Geste</th>
+<th>Ce que ça veut dire concrètement</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Automatiser</strong></td>
+<td>Trois scanners se lancent seuls à chaque <code>push</code> et chaque <em>pull request</em>. Le développeur n'installe rien.</td>
+</tr>
+<tr>
+<td><strong>Unifier</strong></td>
+<td>Un agrégateur convertit trois formats JSON incompatibles en un schéma unique (<code>ScanReport</code>).</td>
+</tr>
+<tr>
+<td><strong>Centraliser</strong></td>
+<td>Tout arrive dans une API, est historisé, et s'affiche dans un tableau de bord multi-projets.</td>
+</tr>
+<tr>
+<td><strong>Faire décider</strong></td>
+<td>Chaque alerte se triage : <em>ouverte</em>, <em>prise en compte</em>, <em>résolue</em>, <em>faux positif</em> — avec justification et journal d'audit.</td>
+</tr>
+<tr>
+<td><strong>Bloquer</strong></td>
+<td>Au-delà du seuil de gravité choisi pour le projet, le <em>check</em> GitHub échoue et le bouton « Merge » est grisé.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Ce qui distingue le produit d'un simple lanceur de scanners</strong> : le blocage effectif de la fusion, le suivi d'un même problème dans le temps par empreinte stable, le triage tracé, et une chaîne d'authentification à trois circuits séparés.</p>
+<hr />
+<h1 id="2-fonctionnement-de-bout-en-bout">2. Fonctionnement de bout en bout</h1>
+<h2 id="21-le-schema-general">2.1 Le schéma général</h2>
+<pre><code>   Développeur
+        |  git push  /  ouvre une pull request
+        v
++------------------------------------------------------------+
+|  GitHub Actions — workflow « iac-guard Scan »              |
+|                                                            |
+|   1. checkout (fetch-depth: 0 -&gt; historique Git complet)   |
+|   2. controle de joignabilite : GET {API}/health           |
+|   3. Gitleaks 8.21.2   -&gt; gitleaks.json   (secrets)        |
+|      Checkov (latest)  -&gt; checkov.json    (config IaC)     |
+|      Semgrep 1.78.0    -&gt; semgrep.json    (SAST code)      |
+|   4. aggregator.py : 3 formats -&gt; 1 ScanReport             |
+|   5. POST {API}/api/scans  Authorization: Bearer iacg_...  |
+|   6. code de sortie 1 si la reponse dit should_fail        |
+|   7. upload-artifact : les 3 JSON bruts restent joignables |
++------------------------------------------------------------+
+        |  HTTP / JSON
+        v
++------------------------------------------------------------+
+|  API FastAPI (Uvicorn, port 8000)                          |
+|                                                            |
+|   . authentifie le projet par SHA-256(token)               |
+|   . persiste 1 Scan + N Findings (SQLAlchemy)              |
+|   . applique la politique fail_on_severity du projet       |
+|   . repond { scan_id, total_findings, should_fail, ... }   |
++------------------------------------------------------------+
+        |                                    |
+        v                                    v
+   PostgreSQL 16                    Tableau de bord Next.js
+   (SQLite en dev)                  cookie httpOnly + JWT
+   14 tables                        KPI, alertes, triage, audit
+</code></pre>
+<h2 id="22-le-cycle-de-vie-dun-scan-etape-par-etape">2.2 Le cycle de vie d'un scan, étape par étape</h2>
+<h3 id="etape-1-declenchement">Étape 1 — Déclenchement</h3>
+<p>Le workflow <code>pipeline/github-actions-template/scan-standalone.yml</code> se déclenche sur :</p>
+<ul>
+<li><code>push</code> limité aux chemins <code>**.tf</code>, <code>**.py</code>, <code>**.js</code>, <code>.github/workflows/scan.yml</code> ;</li>
+<li>toute <code>pull_request</code> (sans filtre de chemin) ;</li>
+<li><code>workflow_dispatch</code> — le bouton « Run workflow » de l'onglet Actions.</li>
+</ul>
+<p>Le <code>checkout</code> utilise <code>fetch-depth: 0</code>. Ce n'est pas un détail : sans l'historique complet, Gitleaks ne verrait que l'état actuel des fichiers et <strong>manquerait un secret supprimé dans un commit ultérieur</strong> — or c'est précisément le cas dangereux, puisque le secret reste récupérable dans l'historique.</p>
+<h3 id="etape-2-controle-de-joignabilite">Étape 2 — Contrôle de joignabilité</h3>
+<p>Avant de dépenser trois minutes de scan, le workflow appelle <code>GET {API_URL}/health</code>. L'URL est d'abord nettoyée de ses espaces et de son éventuel slash final. Un copier-coller depuis Windows colle facilement un <code>\r\n</code> invisible en fin de variable ; <code>curl</code> refuse alors l'URL avec un message (« URL rejected: Malformed input ») qui n'explique rien. Si l'API ne répond pas, le job s'arrête ici avec un message clair.</p>
+<h3 id="etape-3-les-trois-scanners">Étape 3 — Les trois scanners</h3>
+<p>Chaque étape porte <code>continue-on-error: true</code>. La raison est technique : <strong>un scanner qui trouve des problèmes sort en code non nul</strong>. Sans cette tolérance, le premier scanner qui trouve quelque chose arrêterait le job et on perdrait les deux autres rapports.</p>
+<table>
+<thead>
+<tr>
+<th>Scanner</th>
+<th>Commande exacte</th>
+<th>Sortie</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Gitleaks</td>
+<td><code>gitleaks detect --source . --report-format json --report-path gitleaks.json --redact --exit-code 0</code></td>
+<td>Liste plate de secrets</td>
+</tr>
+<tr>
+<td>Checkov</td>
+<td><code>checkov -d . -o json --soft-fail &gt; checkov.json</code></td>
+<td><code>{results: {failed_checks: [...]}}</code></td>
+</tr>
+<tr>
+<td>Semgrep</td>
+<td><code>semgrep scan --config=auto --json --output semgrep.json</code></td>
+<td><code>{results: [...]}</code></td>
+</tr>
+</tbody>
+</table>
+<p><code>--redact</code> sur Gitleaks masque la valeur du secret dans le rapport : le secret ne transite donc <strong>pas</strong> vers l'API, seule sa localisation le fait.</p>
+<h3 id="etape-4-lagregation">Étape 4 — L'agrégation</h3>
+<p><code>pipeline/aggregator/aggregator.py</code> lit les trois fichiers JSON, applique un <em>parser</em> par outil, et produit une liste de <code>Finding</code> homogènes. Un fichier absent ou vide donne simplement une liste vide — aucune erreur : un scanner peut avoir échoué sans faire tomber la chaîne.</p>
+<h3 id="etape-5-lenvoi">Étape 5 — L'envoi</h3>
+<pre><code>POST {API_URL}/api/scans
+Authorization: Bearer iacg_...
+Content-Type: application/json
+
+{ &quot;schema_version&quot;: &quot;1.0&quot;, &quot;scan&quot;: {...}, &quot;summary&quot;: {...}, &quot;findings&quot;: [ ... ] }
+</code></pre>
+<p>Cette étape, <strong>elle, ne porte pas <code>continue-on-error</code></strong>. C'est délibéré et c'est écrit en commentaire dans le workflow : <em>« un pipeline vert alors que le scan s'est perdu en route est pire que pas de scan du tout »</em>. Si l'envoi échoue, le job échoue.</p>
+<h3 id="etape-6-le-verdict">Étape 6 — Le verdict</h3>
+<p>L'API renvoie <code>should_fail: true|false</code>. L'agrégateur relaie ce verdict en code de sortie :</p>
+<pre><code class="language-python">if result.get(&quot;should_fail&quot;):
+    print(f&quot;[iac-guard] ÉCHEC DU PIPELINE : {result.get('fail_reason')}&quot;)
+    return 1
+</code></pre>
+<p>Le job GitHub passe au rouge. Si la branche principale est protégée avec le <em>check</em> <code>scan</code> exigé, <strong>le bouton « Merge » est grisé</strong> : c'est le point où le produit cesse d'observer et commence à empêcher.</p>
+<h3 id="etape-7-les-rapports-bruts">Étape 7 — Les rapports bruts</h3>
+<p><code>actions/upload-artifact@v4</code> publie les trois JSON d'origine sur la page du run (<code>if: always()</code>, donc même en cas d'échec). On peut comprendre un finding sans relancer un scan complet.</p>
+<h2 id="23-le-parcours-dun-etre-humain">2.3 Le parcours d'un être humain</h2>
+<pre><code>Connexion
+  POST /api/auth/methods   &lt;- quelles methodes pour cet e-mail ?
+        |
+        +- passkey seule ---&gt; POST /api/auth/webauthn/login/{options,verify}
+        |                      puis cookie de SESSION directement
+        |
+        +- mot de passe ----&gt; POST /api/auth/login
+                               |
+                               +- pas de 2FA ---&gt; cookie de SESSION (24 h)
+                               |
+                               +- 2FA active ---&gt; cookie MFA (5 min, portee « mfa »)
+                                                   |
+                                     +-------------+--------------+
+                                     v             v              v
+                              webauthn/       totp/verify   recovery/verify
+                           authenticate/verify
+                                     +-------------+--------------+
+                                                   |
+                                           cookie de SESSION
+</code></pre>
+<p>Une fois la session ouverte, le tableau de bord consomme les routes de lecture, toutes cloisonnées par projet accessible.</p>
+<hr />
+<h1 id="3-les-outils-de-la-chaine">3. Les outils de la chaîne</h1>
+<h2 id="31-les-scanners-executes-dans-le-pipeline-chez-le-client">3.1 Les scanners (exécutés dans le pipeline, chez le client)</h2>
+<h3 id="gitleaks-8212-detection-de-secrets">Gitleaks 8.21.2 — détection de secrets</h3>
+<ul>
+<li><strong>Cherche</strong> : clés d'API, jetons, mots de passe en dur, par expressions régulières et calcul d'entropie.</li>
+<li><strong>Portée</strong> : l'arbre de travail <strong>et tout l'historique Git</strong> (grâce à <code>fetch-depth: 0</code>).</li>
+<li><strong>Installation</strong> : téléchargement direct de la release GitHub, décompression dans <code>/usr/local/bin</code>. Aucun gestionnaire de paquets, aucune image Docker — la version est épinglée dans <code>env: GITLEAKS_VERSION</code>.</li>
+<li><strong>Format de sortie</strong> : liste JSON plate. Champs exploités : <code>RuleID</code>, <code>Description</code>, <code>File</code>, <code>StartLine</code>, <code>EndLine</code>.</li>
+<li><strong>Choix produit</strong> : Gitleaks ne déclare pas de sévérité. iac-guard tranche : <strong>tout secret exposé est <code>critical</code></strong>. Un secret est soit dans le code soit il n'y est pas ; il n'y a pas de demi-mesure.</li>
+<li><strong>Remédiation injectée</strong> : « Retirer le secret du code, le révoquer et le stocker dans un gestionnaire de secrets (Vault, SSM, GitHub Secrets). » — le mot important est <em>révoquer</em> : retirer le secret du code ne suffit pas, il reste dans l'historique.</li>
+</ul>
+<h3 id="checkov-mauvaises-configurations-infrastructure-as-code">Checkov — mauvaises configurations Infrastructure as Code</h3>
+<ul>
+<li><strong>Cherche</strong> : ressources cloud mal déclarées — bucket public, volume non chiffré, port d'administration ouvert, journalisation absente.</li>
+<li><strong>Installation</strong> : <code>pip install checkov</code>, version <strong>non épinglée</strong> (voir §15, c'est une limite assumée).</li>
+<li><strong>Format de sortie</strong> : <code>{results: {failed_checks: [...]}}</code>, ou une <strong>liste</strong> de tels objets quand plusieurs frameworks sont détectés. Le parser gère les deux cas.</li>
+<li><strong>Champs exploités</strong> : <code>check_id</code> (ex. <code>CKV_AWS_21</code>), <code>check_name</code>, <code>severity</code>, <code>resource</code>, <code>repo_file_path</code>, <code>file_line_range</code>, <code>guideline</code>.</li>
+<li><strong>Choix produit</strong> : Checkov ne renseigne <code>severity</code> que pour les abonnés à la plateforme Prisma. En open source, le champ est vide → <strong><code>medium</code> par défaut</strong>.</li>
+</ul>
+<h3 id="semgrep-1780-analyse-statique-du-code-applicatif-sast">Semgrep 1.78.0 — analyse statique du code applicatif (SAST)</h3>
+<ul>
+<li><strong>Cherche</strong> : injection SQL, injection de commande, désérialisation dangereuse, etc., dans le code applicatif (Python, JavaScript…), pas dans l'IaC.</li>
+<li><strong>Configuration</strong> : <code>--config=auto</code>, c'est-à-dire le jeu de règles du Semgrep Registry adapté aux langages détectés dans le dépôt.</li>
+<li><strong>Format de sortie</strong> : <code>{results: [...]}</code>. Champs exploités : <code>check_id</code>, <code>extra.message</code> (première ligne seulement, comme titre), <code>extra.severity</code>, <code>extra.fix</code>, <code>path</code>, <code>start.line</code>, <code>end.line</code>.</li>
+<li><strong>Choix produit</strong> : Semgrep exprime la gravité en <code>ERROR</code> / <code>WARNING</code> / <code>INFO</code>, pas en critical/high/medium/low. La table de correspondance mappe <code>error → high</code> et <code>warning → medium</code>.</li>
+</ul>
+<h3 id="conftest-0560-opa-regles-metier-support-present-inactif">Conftest 0.56.0 / OPA — règles métier (support présent, inactif)</h3>
+<ul>
+<li><strong>Statut</strong> : le parser existe et est complet dans l'agrégateur, l'énumération <code>ToolName.CONFTEST</code> existe, le workflow <code>scan.yml</code> l'appelle. <strong>Mais le dossier <code>policies/</code> du dépôt est vide</strong> : il n'y a aucune règle Rego à charger, et le workflow réellement recommandé par le README (<code>scan-standalone.yml</code>) n'appelle pas Conftest. Le support est donc du code prêt, pas une fonctionnalité livrée.</li>
+<li><strong>Ce que le parser sait faire</strong> : lire <code>failures</code> (défaut <code>high</code>) et <code>warnings</code> (défaut <code>low</code>), et laisser la métadonnée Rego surcharger <code>rule_id</code>, <code>title</code>, <code>severity</code>, <code>resource</code>, <code>remediation</code>. Le choix de conception est que <strong>la règle Rego porte sa propre sévérité</strong>.</li>
+</ul>
+<h2 id="32-le-socle-backend">3.2 Le socle backend</h2>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Version</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Python</strong></td>
+<td>3.12</td>
+<td>Langage du backend et de l'agrégateur</td>
+</tr>
+<tr>
+<td><strong>FastAPI</strong></td>
+<td>≥0.115, &lt;1</td>
+<td>Framework HTTP, validation, OpenAPI généré (<code>/docs</code>)</td>
+</tr>
+<tr>
+<td><strong>Uvicorn</strong></td>
+<td>≥0.30, &lt;1</td>
+<td>Serveur ASGI (<code>--host 0.0.0.0 --port 8000</code>)</td>
+</tr>
+<tr>
+<td><strong>SQLAlchemy</strong></td>
+<td>≥2.0, &lt;3</td>
+<td>ORM, style 2.0 (<code>Mapped[...]</code>, <code>select()</code>)</td>
+</tr>
+<tr>
+<td><strong>Pydantic</strong></td>
+<td>≥2.10, &lt;3</td>
+<td>Schémas d'entrée/sortie, validation</td>
+</tr>
+<tr>
+<td><strong>pydantic-settings</strong></td>
+<td>≥2.5, &lt;3</td>
+<td>Configuration par variables d'environnement + <code>.env</code></td>
+</tr>
+<tr>
+<td><strong>python-jose[cryptography]</strong></td>
+<td>≥3.3, &lt;4</td>
+<td>Signature et vérification des JWT (HS256)</td>
+</tr>
+<tr>
+<td><strong>argon2-cffi</strong></td>
+<td>≥23.1, &lt;26</td>
+<td>Hachage des mots de passe (Argon2id)</td>
+</tr>
+<tr>
+<td><strong>bcrypt</strong></td>
+<td>≥4.1, &lt;6</td>
+<td><strong>Lecture seule</strong> : vérifier les anciens hash pour les migrer</td>
+</tr>
+<tr>
+<td><strong>webauthn</strong></td>
+<td>≥2.0, &lt;3</td>
+<td>Génération/vérification des challenges FIDO2</td>
+</tr>
+<tr>
+<td><strong>pyotp</strong></td>
+<td>≥2.9, &lt;3</td>
+<td>TOTP (RFC 6238)</td>
+</tr>
+<tr>
+<td><strong>email-validator</strong></td>
+<td>≥2.0, &lt;3</td>
+<td>Validation des <code>EmailStr</code> Pydantic</td>
+</tr>
+<tr>
+<td><strong>psycopg[binary]</strong></td>
+<td>≥3.2, &lt;4</td>
+<td>Pilote PostgreSQL</td>
+</tr>
+<tr>
+<td><strong>pytest</strong></td>
+<td>≥8.0, &lt;9</td>
+<td>Tests (dev uniquement)</td>
+</tr>
+<tr>
+<td><strong>httpx</strong></td>
+<td>≥0.27, &lt;1</td>
+<td>Requis par <code>fastapi.testclient</code></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Note sur <code>passlib</code></strong> : volontairement <strong>absent</strong>. Le commentaire de <code>requirements.txt</code> explique pourquoi — passlib n'est plus maintenu et lit <code>bcrypt.__about__</code>, supprimé depuis bcrypt 4.1 ; il casse à l'exécution. bcrypt est donc appelé directement.</p>
+<h2 id="33-le-socle-frontend">3.3 Le socle frontend</h2>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Version</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Next.js</strong></td>
+<td>16.2.10</td>
+<td>Framework React, App Router, Turbopack</td>
+</tr>
+<tr>
+<td><strong>React / React DOM</strong></td>
+<td>19.2.4</td>
+<td>Bibliothèque d'interface</td>
+</tr>
+<tr>
+<td><strong>TypeScript</strong></td>
+<td>^5</td>
+<td>Typage</td>
+</tr>
+<tr>
+<td><strong>Tailwind CSS</strong></td>
+<td>^4 (via <code>@tailwindcss/postcss</code>)</td>
+<td>Styles utilitaires</td>
+</tr>
+<tr>
+<td><strong>shadcn</strong></td>
+<td>^4.13.0</td>
+<td>Générateur de composants (22 composants dans <code>components/ui/</code>)</td>
+</tr>
+<tr>
+<td><strong>@base-ui/react</strong></td>
+<td>^1.6.0</td>
+<td>Primitives accessibles sous-jacentes</td>
+</tr>
+<tr>
+<td><strong>@simplewebauthn/browser</strong></td>
+<td>^13.3.0</td>
+<td>Appels <code>navigator.credentials.*</code> côté navigateur</td>
+</tr>
+<tr>
+<td><strong>@tanstack/react-table</strong></td>
+<td>^8.21.3</td>
+<td>Table d'alertes : tri, pagination</td>
+</tr>
+<tr>
+<td><strong>recharts</strong></td>
+<td>^3.8.0</td>
+<td>Courbe d'activité</td>
+</tr>
+<tr>
+<td><strong>qrcode.react</strong></td>
+<td>^4.2.0</td>
+<td>QR code d'enrôlement TOTP</td>
+</tr>
+<tr>
+<td><strong>input-otp</strong></td>
+<td>^1.4.2</td>
+<td>Champ de saisie du code à 6 chiffres</td>
+</tr>
+<tr>
+<td><strong>sonner</strong></td>
+<td>^2.0.7</td>
+<td>Notifications <em>toast</em></td>
+</tr>
+<tr>
+<td><strong>next-themes</strong></td>
+<td>^0.4.6</td>
+<td>Thème clair / sombre</td>
+</tr>
+<tr>
+<td><strong>lucide-react</strong></td>
+<td>^1.24.0</td>
+<td>Icônes</td>
+</tr>
+<tr>
+<td><strong>clsx / tailwind-merge / class-variance-authority</strong></td>
+<td>—</td>
+<td>Composition de classes CSS</td>
+</tr>
+<tr>
+<td><strong>eslint / eslint-config-next</strong></td>
+<td>^9 / 16.2.10</td>
+<td>Analyse statique du front</td>
+</tr>
+</tbody>
+</table>
+<h2 id="34-infrastructure-et-outillage">3.4 Infrastructure et outillage</h2>
+<table>
+<thead>
+<tr>
+<th>Outil</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Docker / Docker Compose</strong></td>
+<td>Deux services : <code>db</code> (postgres:16-alpine, volume <code>pgdata</code>, <em>healthcheck</em> <code>pg_isready</code>) et <code>api</code> (build de <code>./backend</code>, démarre seulement quand la base est saine)</td>
+</tr>
+<tr>
+<td><strong>PostgreSQL</strong></td>
+<td>16-alpine en développement conteneurisé ; SQLite en développement local</td>
+</tr>
+<tr>
+<td><strong>GitHub Actions</strong></td>
+<td>Runner <code>ubuntu-latest</code>. Actions utilisées : <code>actions/checkout@v4</code>, <code>actions/setup-python@v5</code>, <code>actions/upload-artifact@v4</code></td>
+</tr>
+<tr>
+<td><strong>Git</strong></td>
+<td>4 commits sur <code>main</code>, messages en français, à l'impératif</td>
+</tr>
+<tr>
+<td><strong>pytest</strong></td>
+<td><code>pytest.ini</code> : <code>pythonpath = .</code>, <code>testpaths = tests</code>, <code>addopts = -q</code></td>
+</tr>
+<tr>
+<td><strong>MCP shadcn</strong></td>
+<td><code>.mcp.json</code> déclare un serveur MCP <code>shadcn</code> (<code>npx shadcn@latest mcp</code>) utilisé pendant le développement de l'interface</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="4-les-protocoles">4. Les protocoles</h1>
+<p>Cette section liste les protocoles et standards effectivement mis en œuvre, avec <strong>où</strong> et <strong>comment</strong>.</p>
+<h2 id="41-http-rest-le-transport-de-tout">4.1 HTTP / REST — le transport de tout</h2>
+<ul>
+<li><strong>Style</strong> : REST sur JSON. Les ressources sont <code>/api/projects</code>, <code>/api/scans</code>, <code>/api/alerts</code>, <code>/api/admin/users</code>…</li>
+<li><strong>Verbes</strong> : <code>GET</code> (lecture), <code>POST</code> (création et actions), <code>PATCH</code> (modification partielle), <code>PUT</code> (remplacement complet — utilisé pour l'attribution de projets, qui est un <em>set</em>), <code>DELETE</code>.</li>
+<li><strong>Codes de statut employés</strong> : <code>200</code>, <code>201</code> (création), <code>202</code> (accepté sans effet garanti — mot de passe oublié), <code>204</code> (succès sans corps), <code>401</code> (non authentifié), <code>403</code> (rôle insuffisant / compte désactivé), <code>404</code> (introuvable <strong>ou</strong> hors périmètre), <code>409</code> (conflit métier), <code>422</code> (validation), <code>429</code> (verrouillage / quota).</li>
+<li><strong>Documentation</strong> : OpenAPI générée automatiquement par FastAPI, servie sur <code>/docs</code> (Swagger UI) et <code>/openapi.json</code>.</li>
+<li><strong>Sonde de vie</strong> : <code>GET /health</code> → <code>{"status": "ok", "app": "iac-guard"}</code>. C'est ce que le pipeline appelle avant de scanner et ce que Compose peut interroger.</li>
+</ul>
+<h2 id="42-bearer-token-lauthentification-du-pipeline">4.2 Bearer token — l'authentification du pipeline</h2>
+<p>En-tête standard <code>Authorization: Bearer &lt;token&gt;</code> (RFC 6750). Le jeton a la forme <code>iacg_</code> + 32 octets aléatoires encodés en URL-safe base64 (<code>secrets.token_urlsafe(32)</code>).</p>
+<p>Côté serveur, le jeton <strong>n'est jamais stocké en clair</strong> :</p>
+<pre><code class="language-python">project = db.scalar(select(Project).where(Project.token_hash == hash_token(token)))
+</code></pre>
+<p><code>hash_token</code> est un SHA-256 simple, <strong>sans sel et sans dérivation lente</strong> — et c'est justifié : le jeton porte 256 bits d'entropie aléatoire, il n'est donc pas attaquable par dictionnaire. Ajouter Argon2 ici ne protégerait rien et coûterait une vérification lente à chaque scan.</p>
+<p>Ce qui est stocké en plus : <code>token_prefix</code>, les neuf premiers caractères (<code>iacg_ab12…</code>), uniquement pour que l'interface puisse afficher de quel jeton on parle.</p>
+<p><strong>Conséquence assumée</strong> : un jeton perdu n'est pas récupérable. On en régénère un (§12.4).</p>
+<h2 id="43-jwt-json-web-token-la-session-humaine">4.3 JWT (JSON Web Token) — la session humaine</h2>
+<ul>
+<li><strong>Algorithme</strong> : HS256 (HMAC-SHA256), clé symétrique <code>SECRET_KEY</code>.</li>
+<li><strong>Charge utile</strong> :</li>
+</ul>
+<p><code>json
+  { "sub": "42", "scope": "session", "iat": 1757... , "exp": 1757... }</code></p>
+<p><code>sub</code> est une <strong>chaîne</strong> (la spécification JWT l'impose), même si l'identifiant utilisateur est un entier.</p>
+<ul>
+<li><strong>Deux portées, et c'est le point central</strong> :</li>
+</ul>
+<table>
+<thead>
+<tr>
+<th>Portée</th>
+<th>Durée</th>
+<th>Ce qu'elle ouvre</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>session</code></td>
+<td><code>access_token_expire_minutes</code> = 1 440 min (24 h)</td>
+<td>L'API complète</td>
+</tr>
+<tr>
+<td><code>mfa</code></td>
+<td><code>mfa_token_expire_minutes</code> = 5 min</td>
+<td><strong>Uniquement</strong> les routes de vérification du second facteur</td>
+</tr>
+</tbody>
+</table>
+<p><code>decode_access_token(token, expected_scope)</code> refuse un jeton dont la portée ne correspond pas. Sans ce contrôle, le jeton délivré après le mot de passe mais avant la 2FA ouvrirait l'API — <strong>la 2FA deviendrait contournable</strong>. C'est la ligne la plus importante du module.</p>
+<ul>
+<li><strong>Ce que le JWT ne contient pas</strong> : le rôle. Il est relu en base à chaque requête (§9.5). Un changement de rôle prend donc effet immédiatement, sans attendre l'expiration ni gérer une liste de révocation.</li>
+</ul>
+<h2 id="44-cookies-le-stockage-de-la-session">4.4 Cookies — le stockage de la session</h2>
+<p>Deux cookies, posés par <code>app/api/cookies.py</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Cookie</th>
+<th>Contenu</th>
+<th>Durée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>iacguard_session</code></td>
+<td>JWT de portée <code>session</code></td>
+<td>24 h</td>
+</tr>
+<tr>
+<td><code>iacguard_mfa</code></td>
+<td>JWT de portée <code>mfa</code></td>
+<td>5 min</td>
+</tr>
+</tbody>
+</table>
+<p>Attributs, et la raison de chacun :</p>
+<table>
+<thead>
+<tr>
+<th>Attribut</th>
+<th>Valeur</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>httponly</code></td>
+<td><code>True</code></td>
+<td>JavaScript ne peut pas lire le cookie. Une faille XSS sur le tableau de bord <strong>ne peut donc pas voler la session</strong>. En <code>localStorage</code>, le moindre script injecté la vole.</td>
+</tr>
+<tr>
+<td><code>secure</code></td>
+<td><code>settings.cookie_secure</code> — <code>False</code> en dev, <strong>obligatoirement <code>True</code> en production</strong></td>
+<td>Impose HTTPS. Le démarrage est refusé en production si ce n'est pas le cas.</td>
+</tr>
+<tr>
+<td><code>samesite</code></td>
+<td><code>lax</code></td>
+<td>Le navigateur n'envoie pas le cookie sur une requête POST venue d'un autre site : l'essentiel des attaques CSRF tombe.</td>
+</tr>
+<tr>
+<td><code>path</code></td>
+<td><code>/</code></td>
+<td>Portée à toute l'API.</td>
+</tr>
+<tr>
+<td><code>max_age</code></td>
+<td>Aligné sur l'expiration du JWT</td>
+<td>Le cookie et le jeton meurent ensemble.</td>
+</tr>
+</tbody>
+</table>
+<p>Poser le cookie de session efface automatiquement le cookie MFA : il a rempli son rôle.</p>
+<p>Les clients non-navigateur peuvent utiliser <code>Authorization: Bearer &lt;JWT&gt;</code> à la place du cookie ; <code>get_current_user</code> accepte les deux.</p>
+<h2 id="45-cors-qui-a-le-droit-de-parler-a-lapi">4.5 CORS — qui a le droit de parler à l'API</h2>
+<pre><code class="language-python">app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.cors_origins,   # liste EXPLICITE
+    allow_credentials=True,
+    allow_methods=[&quot;*&quot;],
+    allow_headers=[&quot;*&quot;],
+)
+</code></pre>
+<p><code>allow_credentials=True</code> est indispensable pour que le navigateur joigne le cookie. Il <strong>interdit</strong> <code>allow_origins=["*"]</code> — et c'est précisément la garantie recherchée : un site tiers ne peut pas appeler l'API avec le cookie de la victime. La liste par défaut est <code>["http://localhost:5173", "http://localhost:3000"]</code>.</p>
+<h2 id="46-webauthn-fido2-la-biometrie-et-les-cles-de-securite">4.6 WebAuthn / FIDO2 — la biométrie et les clés de sécurité</h2>
+<p>Le standard W3C WebAuthn, avec CTAP2 entre le navigateur et l'authentificateur. Implémenté dans <code>app/services/mfa.py</code> (py_webauthn) et côté navigateur via <code>@simplewebauthn/browser</code>.</p>
+<p><strong>Le principe en une phrase</strong> : le serveur envoie un défi aléatoire, l'appareil le signe avec une clé privée qui ne quitte jamais le TPM ou la Secure Enclave (déverrouillée par l'empreinte, le visage ou le PIN), et le serveur vérifie la signature avec la clé publique. <strong>Le serveur ne voit jamais la biométrie.</strong></p>
+<p>Deux cérémonies :</p>
+<pre><code>ENROLEMENT (register)                   CONNEXION (authenticate)
+--------------------                    ------------------------
+POST .../register/options               POST .../authenticate/options
+  serveur -&gt; options + challenge          serveur -&gt; options + challenge
+  (stocke le challenge en base)           (stocke le challenge en base)
+        |                                       |
+navigator.credentials.create()          navigator.credentials.get()
+  l'appareil genere une paire             l'appareil signe le challenge
+  de cles, garde la privee                avec sa cle privee
+        |                                       |
+POST .../register/verify                POST .../authenticate/verify
+  serveur verifie et stocke               serveur verifie la signature
+  la CLE PUBLIQUE                         avec la cle publique stockee
+</code></pre>
+<p>Paramètres retenus et leur raison :</p>
+<table>
+<thead>
+<tr>
+<th>Paramètre</th>
+<th>Valeur</th>
+<th>Raison</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rp_id</code></td>
+<td><code>webauthn_rp_id</code>, par défaut <code>localhost</code></td>
+<td>Domaine « propriétaire » de la clé. Ce doit être le domaine du <strong>frontend</strong>, pas celui de l'API. C'est ce qui rend les passkeys résistantes au <em>phishing</em> : une clé créée pour un domaine ne peut pas être présentée à un autre.</td>
+</tr>
+<tr>
+<td><code>expected_origin</code></td>
+<td><code>webauthn_origins</code>, liste exacte</td>
+<td>Origine autorisée à présenter une assertion.</td>
+</tr>
+<tr>
+<td><code>user_verification</code></td>
+<td><code>REQUIRED</code></td>
+<td>L'appareil <strong>doit</strong> vérifier l'utilisateur (empreinte, visage ou PIN). Sans cela une simple présence suffirait : ce ne serait pas un vrai second facteur.</td>
+</tr>
+<tr>
+<td><code>resident_key</code></td>
+<td><code>PREFERRED</code></td>
+<td>Permet la connexion sans saisir d'e-mail (<em>passkey découvrable</em>), sans l'imposer aux authentificateurs qui ne la gèrent pas.</td>
+</tr>
+<tr>
+<td><code>exclude_credentials</code></td>
+<td>Clés déjà enrôlées</td>
+<td>Empêche d'enrôler deux fois le même appareil.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Challenge</strong> : stocké <strong>en base</strong> (table <code>auth_challenges</code>), pas dans un cookie, et <strong>supprimé à la première utilisation</strong> (<code>_consume_challenge</code> lit puis <code>db.delete</code>). Un challenge doit être à usage unique, sinon une signature interceptée pourrait être rejouée. TTL : 300 secondes. Un seul challenge en cours par couple <em>(utilisateur, usage)</em> — le nouveau écrase l'ancien.</p>
+<p><strong>Compteur anti-clonage</strong> : l'authentificateur incrémente <code>sign_count</code> à chaque usage. S'il régresse, la clé a probablement été clonée → refus. Nuance implémentée : beaucoup de passkeys renvoient toujours 0 ; dans ce cas on ne peut rien déduire et le contrôle n'est pas appliqué.</p>
+<pre><code class="language-python">if verified.new_sign_count != 0 and verified.new_sign_count &lt;= stored.sign_count:
+    raise MfaError(&quot;Clé potentiellement clonée : authentification refusée.&quot;)
+</code></pre>
+<p><strong>Gestion d'erreurs</strong> : <code>WebAuthnException</code>, la classe mère, est capturée en entier plutôt que chaque sous-classe — parsing JSON, signature invalide, CBOR corrompu… en oublier une donnerait un HTTP 500 au lieu d'un message clair.</p>
+<h2 id="47-totp-rfc-6238">4.7 TOTP — RFC 6238</h2>
+<p>Le code à six chiffres des applications d'authentification (Google Authenticator, Authy, Microsoft Authenticator).</p>
+<ul>
+<li><strong>Secret</strong> : base32 aléatoire, <code>pyotp.random_base32()</code>.</li>
+<li><strong>Transmission au téléphone</strong> : URI <code>otpauth://</code> encodée en QR code côté navigateur (<code>qrcode.react</code>), construite par <code>provisioning_uri(name=user.email, issuer_name="iac-guard")</code>.</li>
+<li><strong>Fenêtre de tolérance</strong> : <code>valid_window=1</code>, soit ±30 secondes. Les horloges des téléphones dérivent ; sans cette tolérance, des codes valides seraient refusés.</li>
+<li><strong>Activation en deux temps</strong> : <code>POST /totp/setup</code> génère et stocke le secret, mais <code>totp_enabled</code> reste <code>False</code>. Il ne passe à <code>True</code> qu'après <code>POST /totp/confirm</code> avec un premier code valide — preuve que l'application est bien configurée. <strong>Sans ce garde-fou, on enfermerait l'utilisateur dehors.</strong></li>
+<li><strong>Différence de nature avec WebAuthn</strong> : le secret TOTP est <em>partagé</em> entre le serveur et le téléphone. Une fuite de base compromet donc les secrets TOTP, pas les clés WebAuthn (dont seule la partie publique est stockée). C'est écrit noir sur blanc dans le docstring du modèle.</li>
+</ul>
+<h2 id="48-hachage-et-empreintes-quel-algorithme-pour-quoi">4.8 Hachage et empreintes — quel algorithme, pour quoi</h2>
+<p>Le projet emploie <strong>quatre</strong> primitives différentes, chacune choisie pour une raison précise. C'est un des points les plus soignés du code.</p>
+<table>
+<thead>
+<tr>
+<th>Ce qu'on protège</th>
+<th>Algorithme</th>
+<th>Pourquoi celui-là</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mot de passe utilisateur</td>
+<td><strong>Argon2id</strong> (paramètres par défaut d'argon2-cffi, alignés OWASP : m=64 MiB, t=3, p=4 ; sel embarqué)</td>
+<td>Choisi par un humain, donc devinable. Argon2id est <em>memory-hard</em> : il impose beaucoup de RAM au vérificateur, ce qui rend le cassage massif sur GPU/ASIC bien plus coûteux que bcrypt.</td>
+</tr>
+<tr>
+<td>Anciens mots de passe</td>
+<td><strong>bcrypt</strong>, en lecture seule</td>
+<td>Migration transparente : au premier login réussi, <code>needs_rehash</code> détecte le préfixe <code>$2</code> et re-hache en Argon2id. Le mot de passe en clair n'existe qu'à cet instant précis.</td>
+</tr>
+<tr>
+<td>Jeton de projet, jeton d'invitation, code de récupération</td>
+<td><strong>SHA-256</strong> sans sel</td>
+<td>Ces valeurs sont générées aléatoirement (≥128 bits), donc non attaquables par dictionnaire. Une dérivation lente n'apporterait rien.</td>
+</tr>
+<tr>
+<td>Empreinte d'un finding</td>
+<td><strong>SHA-1</strong></td>
+<td>Ce n'est pas une primitive de sécurité mais un <strong>identifiant de déduplication</strong>. La résistance aux collisions adverses n'est pas requise ici : personne ne gagne rien à faire collisionner deux findings.</td>
+</tr>
+</tbody>
+</table>
+<p>Détails défensifs autour des mots de passe :</p>
+<ul>
+<li><code>MAX_PASSWORD_BYTES = 1024</code> — au-delà, refus. Sans borne, hacher 1 Mo de « a » transformerait la page de connexion en déni de service.</li>
+<li><code>BCRYPT_MAX_BYTES = 72</code> — bcrypt ignore silencieusement les octets au-delà de 72. Le code <strong>refuse</strong> plutôt que de tronquer : sinon deux mots de passe différents ouvriraient le même compte.</li>
+<li><code>verify_password</code> ne lève jamais : signature invalide, hash corrompu, format inconnu → <code>False</code>.</li>
+<li>Les codes de récupération sont comparés avec <code>hmac.compare_digest</code>, en temps constant, pour ne pas fuiter d'information par mesure de durée.</li>
+</ul>
+<h2 id="49-le-contrat-pipeline-api-le-schema-unifie-v10">4.9 Le contrat pipeline → API : le schéma unifié v1.0</h2>
+<p>Défini dans <code>pipeline/aggregator/schema.py</code>. <strong>C'est la source de vérité du contrat.</strong> Le module est volontairement autonome — aucune dépendance au backend — pour pouvoir être copié dans le dépôt d'un client sans y tirer tout le SaaS.</p>
+<pre><code>ScanReport
+├── schema_version : &quot;1.0&quot;
+├── scan : ScanMeta
+│   ├── repo        : &quot;owner/repo&quot;
+│   ├── branch      : str | null
+│   ├── commit_sha  : str | null
+│   ├── created_at  : datetime (UTC)
+│   └── tools       : [ ToolInfo { name, version } ]
+├── summary : Summary
+│   ├── total       : int
+│   └── by_severity : { critical: n, high: n, medium: n, low: n, info: n }
+└── findings : [ Finding ]
+    ├── source       : gitleaks | checkov | conftest | semgrep
+    ├── category     : secret | misconfiguration | policy | vulnerability
+    ├── rule_id      : &quot;CKV_AWS_21&quot;, id Gitleaks, nom de policy Rego...
+    ├── title        : str
+    ├── severity     : critical | high | medium | low | info
+    ├── resource     : &quot;aws_s3_bucket.data&quot; | null
+    ├── file         : str | null
+    ├── line_start   : int | null
+    ├── line_end     : int | null
+    ├── remediation  : str | null
+    ├── raw          : objet brut de l'outil (audit / debug)
+    └── fingerprint  : calcule, voir §9.1
+</code></pre>
+<p>Trois décisions structurantes :</p>
+<ol>
+<li><strong><code>category</code> est déterminée par l'outil, pas devinée.</strong> Gitleaks ⇒ <code>secret</code>, Checkov ⇒ <code>misconfiguration</code>, Conftest ⇒ <code>policy</code>, Semgrep ⇒ <code>vulnerability</code>.</li>
+<li><strong><code>raw</code> conserve l'objet d'origine</strong>, intégralement, pour l'audit et le débogage. Rien n'est perdu à la normalisation.</li>
+<li><strong>Le mapping réglementaire (CNDP, Bank Al-Maghrib) n'est pas dans ce schéma.</strong> Le pipeline n'envoie que des faits techniques ; l'enrichissement réglementaire est prévu côté backend, à partir de <code>rule_id</code>. Cela évite de redéployer les pipelines clients à chaque évolution du référentiel.</li>
+</ol>
+<h2 id="410-smtp-lexception-qui-nen-est-pas-une">4.10 SMTP — l'exception qui n'en est pas une</h2>
+<p><code>app/services/email.py</code> <strong>ne parle à aucun serveur SMTP</strong>. Le lien d'invitation est écrit dans les journaux de l'API. C'est explicite et assumé le temps qu'un service transactionnel soit configuré ; c'est listé dans les travaux en cours du README et au §15 de ce document.</p>
+<h2 id="411-acces-base-de-donnees">4.11 Accès base de données</h2>
+<ul>
+<li><strong>URL</strong> : <code>sqlite:///./iacguard.db</code> par défaut ; <code>postgresql+psycopg://user:pass@host:5432/iacguard</code> en production.</li>
+<li><strong>SQLite</strong> : <code>check_same_thread=False</code> est nécessaire pour être utilisé depuis FastAPI (multi-thread). Le flag n'est posé que si l'URL commence par <code>sqlite</code>.</li>
+<li><strong>Session</strong> : une session SQLAlchemy par requête, injectée par la dépendance <code>get_db</code>, fermée dans un <code>finally</code>.</li>
+<li><strong>Schéma</strong> : <code>Base.metadata.create_all(bind=engine)</code> au démarrage (<code>lifespan</code>). C'est un choix de MVP explicitement temporaire — Alembic est prévu (§15).</li>
+</ul>
+<hr />
+<h1 id="5-architecture-logicielle">5. Architecture logicielle</h1>
+<h2 id="51-arborescence-commentee">5.1 Arborescence commentée</h2>
+<pre><code>iac-guard/
+├── backend/                     API FastAPI
+│   ├── app/
+│   │   ├── main.py              point d'entree : CORS, lifespan, 7 routeurs
+│   │   ├── core/
+│   │   │   ├── config.py        Settings + garde-fous de production
+│   │   │   └── security.py      mots de passe, JWT, jetons, codes de secours
+│   │   ├── db/session.py        engine, SessionLocal, Base, get_db
+│   │   ├── models/              12 fichiers -&gt; 14 tables SQLAlchemy
+│   │   ├── schemas/             5 fichiers  -&gt; schemas Pydantic d'E/S
+│   │   ├── api/                 6 modules de routes + deps.py + cookies.py
+│   │   └── services/            scoring, aggregates, mfa, email, admin_audit
+│   ├── tests/                   11 fichiers, 131 fonctions, 151 cas
+│   ├── scripts/migrate_rbac.py  migration ponctuelle vers le RBAC
+│   ├── Dockerfile               python:3.12-slim + uvicorn
+│   ├── requirements.txt         dependances de production
+│   ├── requirements-dev.txt     + pytest, httpx
+│   └── .env.example             modele de configuration commente
+├── frontend/                    tableau de bord Next.js
+│   └── src/
+│       ├── app/                 9 routes App Router
+│       ├── components/          18 composants metier + 22 primitives ui/
+│       ├── lib/                 clients d'API, i18n, explications, utilitaires
+│       └── hooks/use-mobile.ts
+├── pipeline/
+│   ├── aggregator/              schema.py (contrat) + aggregator.py + samples/
+│   └── github-actions-template/ scan-standalone.yml (recommande) + scan.yml
+├── policies/                    (vide — regles Rego a ecrire)
+├── docs/                        demo Terraform, script video, speech, exemple JSON
+├── docker-compose.yml           postgres:16-alpine + api
+└── *.md                         les cinq documents (voir « Carte des documents »)
+</code></pre>
+<h2 id="52-les-couches-du-backend-et-leurs-responsabilites">5.2 Les couches du backend et leurs responsabilités</h2>
+<table>
+<thead>
+<tr>
+<th>Couche</th>
+<th>Dossier</th>
+<th>Responsabilité</th>
+<th>Ce qu'elle ne fait pas</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Routes</strong></td>
+<td><code>app/api/</code></td>
+<td>Recevoir, valider via Pydantic, orchestrer, répondre</td>
+<td>Aucune logique de calcul métier</td>
+</tr>
+<tr>
+<td><strong>Dépendances</strong></td>
+<td><code>app/api/deps.py</code></td>
+<td>Authentifier, autoriser, cloisonner</td>
+<td>Rien d'autre : c'est le point de passage obligé</td>
+</tr>
+<tr>
+<td><strong>Services</strong></td>
+<td><code>app/services/</code></td>
+<td>Calcul pur et logique réutilisable (score, agrégats, MFA, audit)</td>
+<td>Ne connaissent pas HTTP</td>
+</tr>
+<tr>
+<td><strong>Modèles</strong></td>
+<td><code>app/models/</code></td>
+<td>Structure des tables et relations</td>
+<td>Pas de logique métier, sauf propriétés dérivées</td>
+</tr>
+<tr>
+<td><strong>Schémas</strong></td>
+<td><code>app/schemas/</code></td>
+<td>Contrat d'entrée/sortie de l'API</td>
+<td>Distincts des modèles : ce qu'on expose n'est pas ce qu'on stocke</td>
+</tr>
+<tr>
+<td><strong>Core</strong></td>
+<td><code>app/core/</code></td>
+<td>Configuration et primitives de sécurité</td>
+<td>Indépendant du framework web</td>
+</tr>
+</tbody>
+</table>
+<p>Cette séparation a une conséquence concrète : <code>compute_score</code> est une fonction pure de <code>dict[str, int]</code> vers <code>ScoreResult</code>. Elle se teste sans base de données, sans client HTTP, sans <em>fixture</em> — d'où sept tests unitaires directs.</p>
+<h2 id="53-les-trois-circuits-dauthentification">5.3 Les trois circuits d'authentification</h2>
+<p>C'est la décision d'architecture la plus structurante, documentée en tête de <code>deps.py</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Circuit</th>
+<th>Qui</th>
+<th>Support</th>
+<th>Dépendance</th>
+<th>Portée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Token de projet</strong></td>
+<td>Le pipeline GitHub Actions</td>
+<td>En-tête <code>Authorization: Bearer iacg_…</code></td>
+<td><code>get_project_from_token</code></td>
+<td>Une seule route : <code>POST /api/scans</code></td>
+</tr>
+<tr>
+<td><strong>JWT de session</strong></td>
+<td>Un humain connecté</td>
+<td>Cookie <code>iacguard_session</code> (ou en-tête Bearer)</td>
+<td><code>get_current_user</code></td>
+<td>Toute l'API applicative</td>
+</tr>
+<tr>
+<td><strong>JWT MFA</strong></td>
+<td>Un humain à mi-connexion</td>
+<td>Cookie <code>iacguard_mfa</code></td>
+<td><code>get_mfa_user</code></td>
+<td><strong>Uniquement</strong> les routes de vérification 2FA</td>
+</tr>
+</tbody>
+</table>
+<p>Trois circuits séparés, trois surfaces d'attaque séparées. Un jeton de projet volé ne donne accès à aucune donnée du tableau de bord : il ne sait qu'écrire un scan dans un projet. Un jeton MFA volé ne donne accès à rien du tout tant que le second facteur n'est pas fourni.</p>
+<hr />
+<h1 id="6-modele-de-donnees">6. Modèle de données</h1>
+<p>14 tables. Le graphe :</p>
+<pre><code>organizations
+   |
+   +---&lt; users &gt;---+---&lt; projects &gt;---&lt; scans &gt;---&lt; findings
+   |     |         |        |
+   |     |         |        +---&lt; finding_triage      (par empreinte)
+   |     |         |        +---&lt; ignored_rules       (exceptions de politique)
+   |     |         |        +---&lt; triage_audit_log    (append-only)
+   |     |         |
+   |     |         +---&lt; project_access               (partage explicite)
+   |     |
+   |     +---&lt; webauthn_credentials
+   |     +---&lt; recovery_codes
+   |     +---&lt; auth_challenges
+   |
+   +---&lt; invitations
+   +---&lt; admin_audit_logs                             (append-only)
+</code></pre>
+<h2 id="61-table-par-table">6.1 Table par table</h2>
+<h3 id="organizations-le-compte-client"><code>organizations</code> — le compte client</h3>
+<p><code>id</code>, <code>name</code>, <code>created_at</code>. Périmètre d'administration : un admin ne gère que les membres de <strong>son</strong> organisation. L'organisation ne possède pas les projets — ceux-ci gardent un propriétaire individuel.</p>
+<h3 id="users-un-humain-du-tableau-de-bord"><code>users</code> — un humain du tableau de bord</h3>
+<p>Champs notables :</p>
+<table>
+<thead>
+<tr>
+<th>Champ</th>
+<th>Détail</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>email</code></td>
+<td>Unique, indexé</td>
+</tr>
+<tr>
+<td><code>hashed_password</code></td>
+<td><code>NULL</code> tant qu'une invitation est en attente. <strong>Le compte existe dès l'envoi de l'invitation.</strong></td>
+</tr>
+<tr>
+<td><code>role</code></td>
+<td>Un des cinq rôles, <code>admin</code> par défaut</td>
+</tr>
+<tr>
+<td><code>org_id</code></td>
+<td>Rattachement</td>
+</tr>
+<tr>
+<td><code>created_by_id</code></td>
+<td><code>NULL</code> pour le premier compte d'une organisation (auto-inscription), sinon l'admin qui a invité</td>
+</tr>
+<tr>
+<td><code>totp_secret</code> / <code>totp_enabled</code></td>
+<td>Le secret est stocké dès le <em>setup</em>, mais l'activation attend un premier code valide</td>
+</tr>
+<tr>
+<td><code>failed_login_attempts</code> / <code>locked_until</code></td>
+<td>Anti-force brute</td>
+</tr>
+<tr>
+<td><code>last_login_at</code></td>
+<td>Alimenté à chaque connexion réussie</td>
+</tr>
+</tbody>
+</table>
+<p>Quatre propriétés <strong>dérivées</strong> plutôt que stockées, pour éviter toute désynchronisation :</p>
+<pre><code class="language-python">status                     -&gt; &quot;pending_invitation&quot; | &quot;active&quot; | &quot;disabled&quot;
+has_global_project_access  -&gt; role in (&quot;admin&quot;, &quot;security_lead&quot;)
+webauthn_enabled           -&gt; len(credentials) &gt; 0
+has_mfa / mfa_methods      -&gt; etat reel de la 2FA
+</code></pre>
+<h3 id="projects-un-depot-suivi"><code>projects</code> — un dépôt suivi</h3>
+<p><code>name</code>, <code>owner_id</code>, <code>token_hash</code> (unique), <code>token_prefix</code>, <code>fail_on_severity</code> (nullable), <code>created_at</code>.
+Contrainte : <code>UniqueConstraint(owner_id, name)</code> — deux projets d'un même utilisateur ne peuvent pas porter le même nom.
+Cascades : supprimer un projet supprime ses scans, leurs findings et ses exceptions de règles.</p>
+<h3 id="scans-un-rapport-recu"><code>scans</code> — un rapport reçu</h3>
+<p><code>project_id</code>, <code>schema_version</code>, <code>repo</code>, <code>branch</code>, <code>commit_sha</code>, <code>scanned_at</code> (instant côté pipeline), <code>received_at</code> (instant côté API), <code>total_findings</code>.
+<strong>Deux horodatages distincts</strong> : ils divergent quand un runner est lent ou que l'API a été indisponible.</p>
+<h3 id="findings-un-probleme-detecte"><code>findings</code> — un problème détecté</h3>
+<p><code>scan_id</code>, <code>fingerprint</code> (indexé), <code>source</code>, <code>category</code>, <code>rule_id</code>, <code>title</code>, <code>severity</code> (indexé), <code>resource</code>, <code>file</code>, <code>line_start</code>, <code>line_end</code>, <code>remediation</code>, <code>raw</code> (JSON).</p>
+<h3 id="finding_triage-letat-actuel-dune-decision"><code>finding_triage</code> — l'état actuel d'une décision</h3>
+<p><code>project_id</code>, <code>fingerprint</code>, <code>status</code>, <code>note</code>, <code>updated_by_id</code>, <code>updated_at</code>.
+<code>UniqueConstraint(project_id, fingerprint)</code> : une seule décision par problème et par projet.
+<strong>Attaché à l'empreinte, pas à une ligne de scan</strong> — c'est ce qui fait survivre la décision à la redétection.</p>
+<h3 id="triage_audit_log-lhistorique-des-decisions-append-only"><code>triage_audit_log</code> — l'historique des décisions (append-only)</h3>
+<p><code>project_id</code>, <strong><code>project_name</code></strong>, <strong><code>owner_id</code></strong>, <code>finding_fingerprint</code>, <strong><code>finding_title</code></strong>, <code>from_status</code>, <code>to_status</code>, <code>note</code>, <code>user_id</code>, <code>created_at</code>.</p>
+<p>Les champs en gras sont <strong>dénormalisés volontairement</strong>. La raison est écrite dans le modèle : <em>« un journal d'audit ne doit jamais dépendre de la survie de ce qu'il audite »</em>. Le projet peut être supprimé, l'entrée d'audit reste lisible et filtrable.</p>
+<h3 id="admin_audit_logs-lhistorique-des-actions-dadministration-append-only"><code>admin_audit_logs</code> — l'historique des actions d'administration (append-only)</h3>
+<p><code>org_id</code>, <code>actor_id</code>, <code>action</code>, <code>target_user_id</code>, <code>details</code> (JSON libre), <code>created_at</code>.
+Actions tracées : <code>user.invited</code>, <code>user.role_changed</code>, <code>user.enabled</code>, <code>user.disabled</code>, <code>user.webauthn_reset</code>, changement d'accès aux projets.</p>
+<p><strong>Deux journaux distincts, deux publics</strong> : ici <em>« qui a changé quoi sur quel compte »</em>, là <em>« qui a résolu quelle alerte »</em>.</p>
+<h3 id="ignored_rules-une-exception-de-politique"><code>ignored_rules</code> — une exception de politique</h3>
+<p><code>project_id</code>, <code>rule_id</code>, <code>note</code> (justification), <code>created_by_id</code>, <code>created_at</code>.
+<code>UniqueConstraint(project_id, rule_id)</code>.
+Différent du triage : ici on exclut <strong>toute occurrence</strong> d'une règle sur un projet, quelle que soit la ressource. C'est une exception de politique, pas un jugement au cas par cas.</p>
+<h3 id="project_access-un-partage-explicite"><code>project_access</code> — un partage explicite</h3>
+<p><code>user_id</code>, <code>project_id</code>, <code>granted_by_id</code>, <code>granted_at</code>. <code>UniqueConstraint(user_id, project_id)</code>.
+Ne concerne que les rôles sans accès global. <strong>Règle produit</strong> : un utilisateur à accès non global sans aucune ligne ici ne voit <strong>aucun</strong> projet.</p>
+<h3 id="invitations-la-preuve-dune-invitation"><code>invitations</code> — la preuve d'une invitation</h3>
+<p><code>email</code>, <code>org_id</code>, <code>role</code>, <code>user_id</code>, <code>token_hash</code> (unique), <code>invited_by_id</code>, <code>expires_at</code>, <code>accepted_at</code>, <code>created_at</code>.
+Le jeton en clair n'est <strong>jamais</strong> stocké ni renvoyé par l'API : il n'existe que dans le lien.</p>
+<h3 id="webauthn_credentials-une-passkey"><code>webauthn_credentials</code> — une passkey</h3>
+<p><code>user_id</code>, <code>credential_id</code> (binaire, unique), <code>public_key</code> (binaire), <code>sign_count</code>, <code>name</code> (« PC du bureau »), <code>transports</code>, <code>created_at</code>, <code>last_used_at</code>.
+Un utilisateur peut enrôler plusieurs appareils.</p>
+<h3 id="recovery_codes-un-code-de-secours"><code>recovery_codes</code> — un code de secours</h3>
+<p><code>user_id</code>, <code>code_hash</code>, <code>used_at</code>. <code>used_at</code> non nul ⇒ code consommé. Sans ces codes, perdre son téléphone reviendrait à perdre son compte.</p>
+<h3 id="auth_challenges-un-defi-webauthn-en-attente"><code>auth_challenges</code> — un défi WebAuthn en attente</h3>
+<p><code>user_id</code>, <code>challenge</code> (binaire), <code>purpose</code> (<code>register</code> | <code>authenticate</code>), <code>expires_at</code>. Supprimé dès consommation.</p>
+<hr />
+<h1 id="7-lapi-route-par-route">7. L'API, route par route</h1>
+<p><strong>48 routes</strong> : 47 sous <code>/api</code>, plus <code>/health</code>.</p>
+<h2 id="71-meta">7.1 Méta</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Réponse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/health</code></td>
+<td>aucune</td>
+<td><code>{"status": "ok", "app": "iac-guard"}</code></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/docs</code></td>
+<td>aucune</td>
+<td>Swagger UI (généré par FastAPI)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="72-authentification-apiauth-10-routes">7.2 Authentification — <code>/api/auth</code> (10 routes)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/register</code></td>
+<td>—</td>
+<td>Crée un compte <strong>et une organisation</strong> dont il devient l'admin</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/login</code></td>
+<td>—</td>
+<td>Mot de passe → cookie de session, ou cookie MFA si 2FA active</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/methods</code></td>
+<td>—</td>
+<td>Étape 1 : quelles méthodes proposer pour cet e-mail (réponse identique si inconnu)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/login/options</code></td>
+<td>—</td>
+<td>Défi de connexion par passkey, <strong>premier facteur</strong></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/login/verify</code></td>
+<td>—</td>
+<td>Vérifie l'assertion et ouvre directement la session</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/forgot-password</code></td>
+<td>—</td>
+<td>Toujours <code>202</code>, aucun effet aujourd'hui (§15)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/logout</code></td>
+<td>—</td>
+<td>Efface le cookie (<code>204</code>)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/me</code></td>
+<td>session</td>
+<td>Profil de l'utilisateur connecté</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/me</code></td>
+<td>session</td>
+<td>Change nom et/ou e-mail</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/me/password</code></td>
+<td>session</td>
+<td>Change le mot de passe — <strong>exige l'actuel</strong></td>
+</tr>
+</tbody>
+</table>
+<p>Pourquoi <code>/me/password</code> exige le mot de passe actuel : sinon une session volée suffirait à verrouiller définitivement le compte de la victime.</p>
+<h2 id="73-double-authentification-apiauth2fa-12-routes">7.3 Double authentification — <code>/api/auth/2fa</code> (12 routes)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/status</code></td>
+<td>session</td>
+<td>Méthodes actives, appareils enrôlés, codes restants</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/register/options</code></td>
+<td>session</td>
+<td>Options pour <code>navigator.credentials.create()</code></td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/register/verify</code></td>
+<td>session</td>
+<td>Enregistre la clé <strong>publique</strong></td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/webauthn/{credential_id}</code></td>
+<td>session</td>
+<td>Retire un appareil</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/authenticate/options</code></td>
+<td><strong>mfa</strong></td>
+<td>Défi à signer</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/webauthn/authenticate/verify</code></td>
+<td><strong>mfa</strong></td>
+<td>Vérifie et ouvre la session</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/totp/setup</code></td>
+<td>session</td>
+<td>Génère le secret + l'URI <code>otpauth://</code> (pas encore actif)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/totp/confirm</code></td>
+<td>session</td>
+<td>Active après un premier code valide</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/totp</code></td>
+<td>session</td>
+<td>Désactive le TOTP</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/totp/verify</code></td>
+<td><strong>mfa</strong></td>
+<td>Second facteur par code à 6 chiffres</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/recovery/verify</code></td>
+<td><strong>mfa</strong></td>
+<td>Second facteur par code de secours (usage unique)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/recovery/regenerate</code></td>
+<td>session</td>
+<td>Régénère les 8 codes, invalide les anciens</td>
+</tr>
+</tbody>
+</table>
+<p>Noter la répartition des portées : l'enrôlement demande une <strong>session</strong> complète, la vérification à la connexion n'accepte qu'un jeton <strong>mfa</strong>.</p>
+<h2 id="74-projets-apiprojects-9-routes">7.4 Projets — <code>/api/projects</code> (9 routes)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td>``</td>
+<td>Crée un projet, <strong>renvoie le jeton en clair une seule fois</strong></td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td>``</td>
+<td>Liste les projets accessibles (sans jetons)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/{id}</code></td>
+<td>Nombre de scans, score du dernier scan, date du dernier scan</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/{id}</code></td>
+<td>Supprime le projet et tout son historique</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/{id}/rotate-token</code></td>
+<td>Invalide l'ancien jeton, en émet un nouveau (affiché une fois)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/{id}/policy</code></td>
+<td>Seuil de blocage + exceptions de règles</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/{id}/policy</code></td>
+<td>Change le seuil (<code>null</code> = ne jamais bloquer)</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/{id}/ignored-rules</code></td>
+<td>Ajoute une exception, avec justification</td>
+</tr>
+<tr>
+<td><code>DELETE</code></td>
+<td><code>/{id}/ignored-rules/{rid}</code></td>
+<td>Réactive la règle : ses findings recomptent</td>
+</tr>
+</tbody>
+</table>
+<h2 id="75-ingestion-1-route">7.5 Ingestion (1 route)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Auth</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>POST</code></td>
+<td><code>/api/scans</code></td>
+<td><strong>Token de projet</strong></td>
+<td>Reçoit un <code>ScanReport</code>, persiste, renvoie le verdict</td>
+</tr>
+</tbody>
+</table>
+<p>Le projet est identifié <strong>par le jeton</strong>, jamais par le contenu du message. Un client ne peut donc écrire que dans son propre projet, même s'il ment sur <code>repo</code>.</p>
+<p>Réponse :</p>
+<pre><code class="language-json">{
+  &quot;scan_id&quot;: 128,
+  &quot;project_id&quot;: 10,
+  &quot;total_findings&quot;: 23,
+  &quot;should_fail&quot;: true,
+  &quot;fail_reason&quot;: &quot;Politique du projet : blocage dès qu'un finding atteint la gravité 'high' ou pire.&quot;
+}
+</code></pre>
+<h2 id="76-lecture-scans-alertes-audit-6-routes">7.6 Lecture — scans, alertes, audit (6 routes)</h2>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/audit-log</code></td>
+<td>Journal de triage, paginé et filtrable</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/projects/{id}/scans</code></td>
+<td>Historique des scans, du plus récent au plus ancien</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/alerts</code></td>
+<td><strong>Vue « dernier état »</strong>, tous projets confondus (voir §9.3)</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/scans/{id}</code></td>
+<td>Un scan avec son score calculé</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/api/scans/{id}/findings</code></td>
+<td>Les findings d'un scan, statut de triage inclus</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/api/scans/{id}/findings/{fid}/triage</code></td>
+<td>Enregistre une décision</td>
+</tr>
+</tbody>
+</table>
+<p>Filtres de <code>/api/alerts</code> : <code>project_id</code>, <code>severity</code>, <code>category</code>, <code>status</code>, <code>q</code> (recherche libre sur titre, ressource, fichier, <code>rule_id</code>), <code>page</code>, <code>page_size</code> (1 à 100, défaut 20).</p>
+<h2 id="77-administration-apiadmin-9-routes">7.7 Administration — <code>/api/admin</code> (9 routes)</h2>
+<p>Huit routes protégées par <code>require_role("admin")</code>, plus une route publique — accepter une invitation, puisque l'invité n'a par définition pas encore de session.</p>
+<table>
+<thead>
+<tr>
+<th>Méthode</th>
+<th>Route</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>GET</code></td>
+<td><code>/users</code></td>
+<td>Liste paginée des membres de l'organisation</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/users/invite</code></td>
+<td>Crée (ou ré-invite) un compte et envoie le lien</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/users/{id}/role</code></td>
+<td>Change le rôle</td>
+</tr>
+<tr>
+<td><code>PATCH</code></td>
+<td><code>/users/{id}/status</code></td>
+<td>Active / désactive</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/users/{id}/reset-webauthn</code></td>
+<td>Révoque toutes les passkeys</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/users/{id}/project-access</code></td>
+<td>Projets attribués</td>
+</tr>
+<tr>
+<td><code>PUT</code></td>
+<td><code>/users/{id}/project-access</code></td>
+<td>Remplace l'ensemble des attributions</td>
+</tr>
+<tr>
+<td><code>GET</code></td>
+<td><code>/audit-logs</code></td>
+<td>Journal d'administration, filtrable</td>
+</tr>
+<tr>
+<td><code>POST</code></td>
+<td><code>/invitations/{token}/accept</code></td>
+<td><strong>Publique</strong> — choisit le mot de passe et active le compte</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="8-le-tableau-de-bord">8. Le tableau de bord</h1>
+<h2 id="81-les-9-routes-de-lapplication">8.1 Les 9 routes de l'application</h2>
+<table>
+<thead>
+<tr>
+<th>Route</th>
+<th>Fichier</th>
+<th>Protégée</th>
+<th>Contenu</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>/</code></td>
+<td><code>app/page.tsx</code></td>
+<td>oui</td>
+<td>Tableau de bord : KPI, courbe d'activité, carte de conformité</td>
+</tr>
+<tr>
+<td><code>/alerts</code></td>
+<td><code>app/alerts/page.tsx</code></td>
+<td>oui</td>
+<td>Table des alertes, filtres, triage, panneau de détail</td>
+</tr>
+<tr>
+<td><code>/projects</code></td>
+<td><code>app/projects/page.tsx</code></td>
+<td>oui</td>
+<td>Création, jeton, rotation, politique, exceptions</td>
+</tr>
+<tr>
+<td><code>/security</code></td>
+<td><code>app/security/page.tsx</code></td>
+<td>oui</td>
+<td>2FA : passkeys, TOTP, codes de récupération</td>
+</tr>
+<tr>
+<td><code>/settings</code></td>
+<td><code>app/settings/page.tsx</code></td>
+<td>oui</td>
+<td>Profil, mot de passe, journal de triage</td>
+</tr>
+<tr>
+<td><code>/admin</code></td>
+<td><code>app/admin/page.tsx</code></td>
+<td>oui (<code>admin</code>)</td>
+<td>Comptes, rôles, accès projets, journal d'administration</td>
+</tr>
+<tr>
+<td><code>/login</code></td>
+<td><code>app/login/page.tsx</code></td>
+<td>non</td>
+<td>Connexion en plusieurs étapes</td>
+</tr>
+<tr>
+<td><code>/signup</code></td>
+<td><code>app/signup/page.tsx</code></td>
+<td>non</td>
+<td>Auto-inscription + création d'organisation</td>
+</tr>
+<tr>
+<td><code>/accept-invite</code></td>
+<td><code>app/accept-invite/page.tsx</code></td>
+<td>non</td>
+<td>Activation d'un compte invité</td>
+</tr>
+<tr>
+<td><code>/forgot-password</code></td>
+<td><code>app/forgot-password/page.tsx</code></td>
+<td>non</td>
+<td>Formulaire (sans effet aujourd'hui)</td>
+</tr>
+</tbody>
+</table>
+<h2 id="82-les-composants-metier-notables">8.2 Les composants métier notables</h2>
+<table>
+<thead>
+<tr>
+<th>Composant</th>
+<th>Lignes</th>
+<th>Ce qu'il fait</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>users-manager.tsx</code></td>
+<td>616</td>
+<td>Écran d'administration complet : invitation, rôle, statut, accès projets</td>
+</tr>
+<tr>
+<td><code>projects-manager.tsx</code></td>
+<td>520</td>
+<td>Cycle de vie d'un projet, affichage unique du jeton</td>
+</tr>
+<tr>
+<td><code>dashboard-live.tsx</code></td>
+<td>397</td>
+<td>Orchestration du tableau de bord, rafraîchissement silencieux toutes les 30 s</td>
+</tr>
+<tr>
+<td><code>alerts-data-table.tsx</code></td>
+<td>389</td>
+<td>Table TanStack : tri, pagination, sélection</td>
+</tr>
+<tr>
+<td><code>security-manager.tsx</code></td>
+<td>384</td>
+<td>Enrôlement passkey, QR TOTP, codes de récupération</td>
+</tr>
+<tr>
+<td><code>scan-policy-manager.tsx</code></td>
+<td>294</td>
+<td>Seuil de blocage et exceptions de règles</td>
+</tr>
+<tr>
+<td><code>alerts-manager.tsx</code></td>
+<td>289</td>
+<td>Filtres, recherche, actions de triage</td>
+</tr>
+<tr>
+<td><code>admin-audit-log.tsx</code></td>
+<td>284</td>
+<td>Journal d'administration</td>
+</tr>
+<tr>
+<td><code>finding-detail-sheet.tsx</code></td>
+<td>274</td>
+<td>Panneau pédagogique d'un finding</td>
+</tr>
+<tr>
+<td><code>site-header.tsx</code></td>
+<td>217</td>
+<td>En-tête, navigation, menu utilisateur</td>
+</tr>
+<tr>
+<td><code>audit-log-viewer.tsx</code></td>
+<td>187</td>
+<td>Journal de triage</td>
+</tr>
+<tr>
+<td><code>mfa-login-step.tsx</code></td>
+<td>184</td>
+<td>Étape de second facteur à la connexion</td>
+</tr>
+<tr>
+<td><code>account-settings.tsx</code></td>
+<td>178</td>
+<td>Profil et mot de passe</td>
+</tr>
+<tr>
+<td><code>app-sidebar.tsx</code></td>
+<td>118</td>
+<td>Navigation latérale</td>
+</tr>
+<tr>
+<td><code>activity-chart.tsx</code></td>
+<td>89</td>
+<td>Courbe des 7 derniers scans (recharts)</td>
+</tr>
+<tr>
+<td><code>recovery-codes-dialog.tsx</code></td>
+<td>86</td>
+<td>Affichage unique des 8 codes</td>
+</tr>
+<tr>
+<td><code>auth-shell.tsx</code> / <code>auth-provider.tsx</code> / <code>auth-guard.tsx</code></td>
+<td>73 / 62 / 35</td>
+<td>Coquille d'authentification, contexte, garde de route</td>
+</tr>
+<tr>
+<td><code>compliance-card.tsx</code> / <code>kpi-cards.tsx</code> / <code>severity-badge.tsx</code> / <code>zenith-logo.tsx</code></td>
+<td>55 / 51 / 53 / 45</td>
+<td>Présentation</td>
+</tr>
+</tbody>
+</table>
+<h2 id="83-les-modules-lib">8.3 Les modules <code>lib/</code></h2>
+<table>
+<thead>
+<tr>
+<th>Module</th>
+<th>Lignes</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>auth-api.ts</code></td>
+<td>209</td>
+<td><code>request&lt;T&gt;()</code> — <strong>le point de passage de tous les appels</strong>. Impose <code>credentials: "include"</code> (sans quoi le cookie httpOnly ne partirait pas), normalise les erreurs en <code>ApiError</code>, gère le <code>204</code> et les listes d'erreurs Pydantic</td>
+</tr>
+<tr>
+<td><code>platform-api.ts</code></td>
+<td>227</td>
+<td>Projets, scans, findings, politiques. Types miroirs des schémas Pydantic</td>
+</tr>
+<tr>
+<td><code>admin-api.ts</code></td>
+<td>164</td>
+<td>Routes d'administration</td>
+</tr>
+<tr>
+<td><code>finding-explainer.ts</code></td>
+<td>190</td>
+<td>Base de connaissances : par <code>rule_id</code> connu (<code>CKV_AWS_20</code>, <code>CKV_AWS_21</code>, <code>CKV_AWS_24</code>, <code>CKV_AWS_25</code>…), sinon repli par catégorie. Fournit <em>impact</em>, <em>scénario d'attaque</em>, <em>correctif</em></td>
+</tr>
+<tr>
+<td><code>i18n.tsx</code></td>
+<td>169</td>
+<td>FR / arabe pour les écrans d'authentification, RTL posé par <code>AuthShell</code></td>
+</tr>
+<tr>
+<td><code>data.ts</code></td>
+<td>253</td>
+<td>Types partagés et données de démonstration</td>
+</tr>
+<tr>
+<td><code>utils.ts</code></td>
+<td>6</td>
+<td><code>cn()</code> — fusion de classes Tailwind</td>
+</tr>
+</tbody>
+</table>
+<h2 id="84-le-panneau-de-detail-dun-finding">8.4 Le panneau de détail d'un finding</h2>
+<p>C'est l'endroit où le produit cesse d'être un tableau et devient un outil pédagogique. Pour un finding donné, il présente :</p>
+<ol>
+<li><strong>Ce que c'est</strong> — le problème en une phrase.</li>
+<li><strong>Ce qu'un attaquant peut en faire</strong> — un scénario concret. Exemple pour <code>CKV_AWS_24</code> (SSH ouvert à <code>0.0.0.0/0</code>) : <em>« C'est la première chose que scannent les attaquants automatisés : ils tentent des connexions par force brute 24 h/24 dès qu'un port 22 public est détecté. »</em></li>
+<li><strong>Comment corriger</strong> — la remédiation du scanner si elle existe, sinon celle de la base de connaissances.</li>
+<li><strong>Où</strong> — fichier, lignes, et lien vers la ligne exacte <strong>au commit scanné</strong> sur GitHub.</li>
+<li><strong>Que décider</strong> — les quatre actions de triage, avec champ de justification.</li>
+</ol>
+<hr />
+<h1 id="9-les-algorithmes-et-regles-metier">9. Les algorithmes et règles métier</h1>
+<h2 id="91-lempreinte-stable-fingerprint">9.1 L'empreinte stable (<code>fingerprint</code>)</h2>
+<pre><code class="language-python">parts = [source, rule_id, file or &quot;&quot;, str(line_start or &quot;&quot;), resource or &quot;&quot;]
+fingerprint = sha1(&quot;|&quot;.join(parts).encode(&quot;utf-8&quot;)).hexdigest()
+</code></pre>
+<p><strong>Ce qui entre dans l'empreinte</strong> : l'<em>identité</em> du problème.
+<strong>Ce qui n'y entre pas</strong> : <code>title</code>, <code>severity</code>, <code>remediation</code>, <code>raw</code> — tout ce qui peut changer quand le scanner est mis à jour sans que le problème change.</p>
+<p>C'est ce qui permet à un problème redétecté au scan suivant de rester <strong>le même problème</strong> — et donc de conserver la décision de triage prise dessus.</p>
+<p><strong>Limite connue et assumée</strong> : <code>line_start</code> entre dans le calcul. Ajouter une ligne au-dessus d'un problème décale sa ligne et crée donc une <strong>nouvelle</strong> empreinte — la décision de triage est perdue. Le compromis est délibéré : sans le numéro de ligne, deux occurrences distinctes de la même règle dans un même fichier se confondraient.</p>
+<h2 id="92-le-score-de-conformite">9.2 Le score de conformité</h2>
+<p>Calculé <strong>à la lecture, jamais stocké</strong> : on peut ajuster les poids sans re-scanner tout l'historique.</p>
+<pre><code>score = max(0, 100 - somme(nombre_de_findings[gravite] x poids[gravite]))
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>Gravité</th>
+<th>Points retirés</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>critical</code></td>
+<td>25</td>
+</tr>
+<tr>
+<td><code>high</code></td>
+<td>10</td>
+</tr>
+<tr>
+<td><code>medium</code></td>
+<td>3</td>
+</tr>
+<tr>
+<td><code>low</code></td>
+<td>1</td>
+</tr>
+<tr>
+<td><code>info</code></td>
+<td>0</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Grade</th>
+<th>Seuil</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A</td>
+<td>≥ 90</td>
+</tr>
+<tr>
+<td>B</td>
+<td>≥ 75</td>
+</tr>
+<tr>
+<td>C</td>
+<td>≥ 60</td>
+</tr>
+<tr>
+<td>D</td>
+<td>≥ 40</td>
+</tr>
+<tr>
+<td>F</td>
+<td>&lt; 40</td>
+</tr>
+</tbody>
+</table>
+<p>Les findings couverts par une exception de règle (<code>ignored_rules</code>) sont <strong>exclus du calcul</strong> mais restent visibles dans la liste.</p>
+<p><strong>Limite reconnue</strong> : à 25 points par finding critique, quatre secrets exposés suffisent à atteindre 0. Le score sature et cesse alors de discriminer. La révision est listée dans les travaux en cours du README.</p>
+<h2 id="93-la-vue-dernier-etat">9.3 La vue « dernier état »</h2>
+<p><code>GET /api/alerts</code> ne renvoie <strong>pas</strong> tout l'historique. Pour chaque projet accessible, elle prend le <strong>dernier scan</strong> (<code>ORDER BY scanned_at DESC LIMIT 1</code>) et ne montre que ses findings. Sans cela, un problème redétecté à chaque scan apparaîtrait en double, en triple, en dix exemplaires.</p>
+<p>Le tri final : <strong>plus grave d'abord</strong>, puis le plus récemment détecté.</p>
+<pre><code class="language-python">rows.sort(key=lambda r: (SEVERITY_WEIGHTS.get(r.severity, 0), r.id), reverse=True)
+</code></pre>
+<p>Le poids du score sert ici d'ordre de gravité — une réutilisation économique, mais qui couple le tri au barème.</p>
+<h2 id="94-la-politique-de-blocage">9.4 La politique de blocage</h2>
+<pre><code class="language-python">def exceeds_threshold(by_severity, threshold):
+    if not threshold or threshold not in SEVERITY_ORDER:
+        return False                       # politique desactivee
+    idx = SEVERITY_ORDER.index(threshold)  # [&quot;info&quot;,&quot;low&quot;,&quot;medium&quot;,&quot;high&quot;,&quot;critical&quot;]
+    return any(by_severity.get(sev, 0) &gt; 0 for sev in SEVERITY_ORDER[idx:])
+</code></pre>
+<p>Lu en français : <em>« bloquer dès qu'un finding atteint cette gravité ou pire »</em>. <code>fail_on_severity = "high"</code> bloque donc sur <code>high</code> <strong>et</strong> sur <code>critical</code>.</p>
+<p><code>fail_on_severity = null</code> désactive la politique — c'est la valeur par défaut, rétro-compatible : un projet existant ne se met pas à bloquer tout seul.</p>
+<p>Les exceptions de règles sont retirées <strong>avant</strong> l'évaluation du seuil : une règle acceptée comme risque connu ne bloque plus le pipeline.</p>
+<h2 id="95-le-rbac-a-cinq-roles">9.5 Le RBAC à cinq rôles</h2>
+<table>
+<thead>
+<tr>
+<th>Rôle</th>
+<th>Accès global aux projets de l'organisation</th>
+<th>Accès aux routes <code>/api/admin/*</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>admin</code></td>
+<td>oui</td>
+<td>oui</td>
+</tr>
+<tr>
+<td><code>security_lead</code></td>
+<td>oui</td>
+<td>non</td>
+</tr>
+<tr>
+<td><code>developer</code></td>
+<td>non — attribution explicite</td>
+<td>non</td>
+</tr>
+<tr>
+<td><code>auditor</code></td>
+<td>non — attribution explicite</td>
+<td>non</td>
+</tr>
+<tr>
+<td><code>viewer</code></td>
+<td>non — attribution explicite</td>
+<td>non</td>
+</tr>
+</tbody>
+</table>
+<p>Deux mécanismes <strong>distincts</strong>, qu'il ne faut pas confondre :</p>
+<ol>
+<li><strong>Le contrôle de rôle</strong> — <code>require_role("admin")</code>. Le rôle est <strong>relu en base à chaque requête</strong>, jamais lu dans le JWT. Un rôle retiré prend effet immédiatement, sans liste de révocation.</li>
+<li><strong>Le cloisonnement des projets</strong> — <code>list_accessible_projects</code> / <code>get_accessible_project</code> :</li>
+</ol>
+<pre><code class="language-python">if user.has_global_project_access:
+    # tous les projets possedes par un membre de la meme organisation
+    return select(Project).where(Project.owner_id.in_(
+        select(User.id).where(User.org_id == user.org_id)))
+# sinon : ses propres projets + ceux explicitement partages
+shared = select(ProjectAccess.project_id).where(ProjectAccess.user_id == user.id)
+return select(Project).where(
+    (Project.owner_id == user.id) | (Project.id.in_(shared)))
+</code></pre>
+<p><strong>Le détail qui compte</strong> : hors périmètre, la réponse est <strong>404, jamais 403</strong>. Un 403 confirmerait l'existence de la ressource. De l'extérieur, « ça n'existe pas » et « tu n'y as pas accès » doivent être indiscernables.</p>
+<h2 id="96-les-regles-de-protection-des-comptes">9.6 Les règles de protection des comptes</h2>
+<p>Codées dans <code>admin.py</code>, et testées :</p>
+<table>
+<thead>
+<tr>
+<th>Règle</th>
+<th>Code renvoyé</th>
+<th>Pourquoi</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Le dernier admin actif ne peut pas être rétrogradé</td>
+<td><code>409</code></td>
+<td>Sinon l'organisation devient ingérable</td>
+</tr>
+<tr>
+<td>Le dernier admin actif ne peut pas être désactivé</td>
+<td><code>409</code></td>
+<td>Idem</td>
+</tr>
+<tr>
+<td>On ne peut pas désactiver son propre compte</td>
+<td><code>409</code></td>
+<td>Évite l'auto-exclusion accidentelle</td>
+</tr>
+<tr>
+<td>Un admin ne gère que les membres de son organisation</td>
+<td><code>404</code></td>
+<td>Cloisonnement inter-clients</td>
+</tr>
+<tr>
+<td>Maximum 10 invitations par heure et par admin</td>
+<td><code>429</code></td>
+<td>Anti-spam, compté sur les entrées <code>user.invited</code> du journal</td>
+</tr>
+</tbody>
+</table>
+<p><code>_active_admin_count</code> compte les admins <strong>réellement actifs</strong> : <code>role == "admin"</code> <strong>et</strong> <code>is_active</code> <strong>et</strong> <code>hashed_password IS NOT NULL</code>. Un admin invité mais qui n'a jamais activé son compte ne compte pas — sans ce détail, inviter un admin puis désactiver le seul admin réel verrouillerait l'organisation.</p>
+<h2 id="97-le-triage">9.7 Le triage</h2>
+<p>Quatre statuts : <code>open</code>, <code>acknowledged</code>, <code>resolved</code>, <code>false_positive</code>.</p>
+<ul>
+<li><code>open</code> est l'<strong>état implicite</strong> : aucune ligne n'est créée tant qu'aucune décision n'est prise. Repasser à <code>open</code> <strong>supprime</strong> la ligne de décision.</li>
+<li>Chaque changement effectif écrit une entrée dans <code>triage_audit_log</code>. Une décision identique à la précédente n'écrit rien (<code>if previous_status == payload.status: return</code>).</li>
+<li>La décision est indexée par empreinte : elle survit au scan suivant.</li>
+</ul>
+<h2 id="98-anti-force-brute-et-anti-enumeration">9.8 Anti-force brute et anti-énumération</h2>
+<table>
+<thead>
+<tr>
+<th>Mesure</th>
+<th>Implémentation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Verrouillage</td>
+<td>5 échecs → verrou de 15 minutes, puis le compteur repart à zéro</td>
+</tr>
+<tr>
+<td>Message unique</td>
+<td>Même <code>401</code> et même texte pour « compte inconnu », « mauvais mot de passe » et « invitation non acceptée »</td>
+</tr>
+<tr>
+<td>Défense temporelle</td>
+<td>Sur un e-mail inconnu, le serveur <strong>hache quand même</strong> un mot de passe factice. Sans cela, une réponse instantanée trahirait l'absence de compte</td>
+</tr>
+<tr>
+<td><code>/api/auth/methods</code></td>
+<td>Un e-mail inconnu répond exactement comme un compte à mot de passe seul</td>
+</tr>
+<tr>
+<td>Compte désactivé</td>
+<td><code>403</code> explicite — mais <strong>après</strong> validation du mot de passe, donc sans fuite</td>
+</tr>
+</tbody>
+</table>
+<h2 id="99-les-garde-fous-de-demarrage-en-production">9.9 Les garde-fous de démarrage en production</h2>
+<p><code>Settings._verifier_secrets</code>, validateur Pydantic exécuté à l'import. Si <code>ENVIRONMENT=production</code> :</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Effet</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>SECRET_KEY</code> absente, égale à <code>dev-secret-change-me</code>, ou &lt; 32 caractères</td>
+<td><strong>Refus de démarrer</strong> avec un message qui donne la commande de génération</td>
+</tr>
+<tr>
+<td><code>COOKIE_SECURE</code> désactivé</td>
+<td><strong>Refus de démarrer</strong></td>
+</tr>
+</tbody>
+</table>
+<p>En développement, l'application démarre mais journalise un avertissement visible.</p>
+<p>Le raisonnement, écrit dans le code : <em>« Le code de ce dépôt est public : la clé par défaut l'est donc aussi. Démarrer en production avec elle laisserait n'importe qui forger un jeton de session valide — sans mot de passe ni second facteur. Mieux vaut un démarrage qui échoue bruyamment qu'une authentification qui semble fonctionner tout en étant contournable. »</em></p>
+<hr />
+<h1 id="10-securite-menace-par-menace">10. Sécurité : menace par menace</h1>
+<table>
+<thead>
+<tr>
+<th>Menace</th>
+<th>Parade en place</th>
+<th>Où</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Vol de session par XSS</td>
+<td>Cookie <code>httpOnly</code> — JavaScript ne peut pas le lire. Jamais de jeton en <code>localStorage</code></td>
+<td><code>api/cookies.py</code></td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td><code>SameSite=Lax</code> + liste CORS explicite (jamais <code>*</code>, incompatible avec <code>allow_credentials</code>)</td>
+<td><code>cookies.py</code>, <code>main.py</code></td>
+</tr>
+<tr>
+<td>Cassage de mots de passe après fuite de base</td>
+<td>Argon2id, <em>memory-hard</em>, paramètres OWASP, sel embarqué</td>
+<td><code>core/security.py</code></td>
+</tr>
+<tr>
+<td>Force brute en ligne</td>
+<td>5 tentatives puis verrou de 15 minutes</td>
+<td><code>api/auth.py</code></td>
+</tr>
+<tr>
+<td>Énumération de comptes</td>
+<td>Réponses et durées identiques dans tous les cas</td>
+<td><code>api/auth.py</code></td>
+</tr>
+<tr>
+<td>Contournement de la 2FA</td>
+<td>Portée <code>mfa</code> vérifiée à chaque décodage de JWT</td>
+<td><code>core/security.py</code>, <code>api/deps.py</code></td>
+</tr>
+<tr>
+<td>Rejeu d'une assertion WebAuthn</td>
+<td>Challenge en base, à usage unique, TTL 300 s</td>
+<td><code>services/mfa.py</code></td>
+</tr>
+<tr>
+<td>Clé WebAuthn clonée</td>
+<td>Contrôle de progression de <code>sign_count</code></td>
+<td><code>services/mfa.py</code></td>
+</tr>
+<tr>
+<td>Fuite d'un jeton de projet</td>
+<td>Seul le SHA-256 est stocké ; rotation en un clic ; portée limitée à une seule route</td>
+<td><code>core/security.py</code>, <code>api/projects.py</code></td>
+</tr>
+<tr>
+<td>Écriture croisée entre clients</td>
+<td>Le projet vient du jeton, jamais du contenu du message</td>
+<td><code>api/scans.py</code></td>
+</tr>
+<tr>
+<td>Lecture croisée entre clients</td>
+<td>Cloisonnement par organisation / propriété / octroi, <code>404</code> hors périmètre</td>
+<td><code>api/deps.py</code></td>
+</tr>
+<tr>
+<td>Élévation de privilège par jeton périmé</td>
+<td>Le rôle est relu en base à chaque requête</td>
+<td><code>api/deps.py</code></td>
+</tr>
+<tr>
+<td>Verrouillage total de l'organisation</td>
+<td>Le dernier admin actif est protégé</td>
+<td><code>api/admin.py</code></td>
+</tr>
+<tr>
+<td>Déploiement avec la clé de développement</td>
+<td>Refus de démarrer en production</td>
+<td><code>core/config.py</code></td>
+</tr>
+<tr>
+<td>Déni de service au login</td>
+<td>Mot de passe borné à 1 024 octets</td>
+<td><code>core/security.py</code></td>
+</tr>
+<tr>
+<td>Troncature bcrypt</td>
+<td>Refus au-delà de 72 octets plutôt que troncature silencieuse</td>
+<td><code>core/security.py</code></td>
+</tr>
+<tr>
+<td>Fuite d'un secret dans le rapport de scan</td>
+<td><code>gitleaks --redact</code> : la valeur est masquée avant l'envoi</td>
+<td>workflow</td>
+</tr>
+<tr>
+<td>Perte de traçabilité par suppression</td>
+<td>Journaux append-only et dénormalisés</td>
+<td><code>models/audit_log.py</code>, <code>models/admin_audit_log.py</code></td>
+</tr>
+<tr>
+<td>Perte d'accès après perte d'appareil</td>
+<td>8 codes de récupération à usage unique + réinitialisation admin des passkeys</td>
+<td><code>services/mfa.py</code>, <code>api/admin.py</code></td>
+</tr>
+</tbody>
+</table>
+<h2 id="101-ce-quil-faut-annoncer-comme-limites">10.1 Ce qu'il faut annoncer comme limites</h2>
+<p>Une présentation honnête cite ces points :</p>
+<ul>
+<li><strong>Pas de jeton de rafraîchissement ni de révocation de session.</strong> Un JWT de session vole 24 h. Le rôle étant relu en base, une élévation de privilège est impossible, mais une session volée reste utilisable jusqu'à expiration.</li>
+<li><strong>Pas de limitation de débit globale.</strong> Seuls le login (verrouillage par compte) et l'invitation (10/h) sont protégés. Aucune protection sur <code>POST /api/scans</code>.</li>
+<li><strong><code>raw</code> conserve l'objet brut du scanner.</strong> Gitleaks masque les secrets (<code>--redact</code>), mais un autre outil mal configuré pourrait y déposer une donnée sensible.</li>
+<li><strong>Pas de chiffrement au repos.</strong> Le secret TOTP est stocké en clair en base — contrairement aux clés WebAuthn, dont seule la partie publique existe côté serveur.</li>
+<li><strong><code>create_all</code> au démarrage.</strong> Aucun contrôle de version de schéma ; une évolution de modèle sur une base existante ne sera pas appliquée.</li>
+</ul>
+<hr />
+<h1 id="11-la-methode-de-travail">11. La méthode de travail</h1>
+<h2 id="111-le-principe-directeur-le-code-explique-ses-decisions">11.1 Le principe directeur : le code explique ses décisions</h2>
+<p>C'est la caractéristique la plus visible du dépôt et elle est systématique. Chaque module s'ouvre sur un docstring qui répond à <strong>« pourquoi ce fichier existe et quel piège il évite »</strong>, pas à « ce que fait ce fichier » — que le code dit déjà.</p>
+<p>Trois exemples, tirés tels quels :</p>
+<blockquote>
+<p>« SHA-256 (sans sel) suffit ici : le token est long et aléatoire (256 bits), donc non attaquable par dictionnaire. » — <code>core/security.py</code></p>
+<p>« On répond 404 (et non 403) quand la ressource est hors de portée : un 403 confirmerait son existence. » — <code>api/deps.py</code></p>
+<p>« PAS de <code>continue-on-error</code> ni de try/except silencieux ici : si l'envoi échoue, le job DOIT échouer — un pipeline vert alors que le scan s'est perdu en route est pire que pas de scan du tout. » — <code>scan-standalone.yml</code></p>
+</blockquote>
+<p><strong>La règle appliquée</strong> : un commentaire est écrit quand une décision non évidente a été prise, ou quand un choix protège d'un piège précis. Jamais pour paraphraser la ligne suivante.</p>
+<h2 id="112-conventions-de-code">11.2 Conventions de code</h2>
+<p><strong>Backend (Python)</strong></p>
+<ul>
+<li><code>from __future__ import annotations</code> en tête de chaque module.</li>
+<li>Annotations de type partout, y compris les retours.</li>
+<li>SQLAlchemy en style 2.0 : <code>Mapped[...]</code>, <code>mapped_column</code>, <code>select()</code> — pas de <code>Query</code> hérité.</li>
+<li>Séparateurs visuels normalisés entre grandes sections d'un fichier :
+  <code># ------- #</code> sur 79 colonnes.</li>
+<li>Noms de fonctions en anglais, docstrings et commentaires en français.</li>
+<li>Une exception métier dédiée par domaine plutôt qu'un <code>ValueError</code> générique : <code>MfaError</code>, <code>PasswordTooLongError</code>.</li>
+<li>Les constantes de configuration sont nommées, jamais en dur : <code>MAX_PASSWORD_BYTES</code>, <code>CHALLENGE_TTL_SECONDS</code>, <code>RECOVERY_CODE_COUNT</code>, <code>MIN_SECRET_KEY_LENGTH</code>.</li>
+</ul>
+<p><strong>Frontend (TypeScript)</strong></p>
+<ul>
+<li>Alias d'import <code>@/</code> vers <code>src/</code>.</li>
+<li>Les types de <code>lib/*-api.ts</code> <strong>miroitent</strong> les schémas Pydantic du backend. Le commentaire le dit explicitement pour que la synchronisation soit un geste conscient.</li>
+<li>Un seul point de passage réseau : <code>request&lt;T&gt;()</code> de <code>auth-api.ts</code>. Aucun <code>fetch</code> direct ailleurs — ce qui garantit que <code>credentials: "include"</code> et la normalisation des erreurs ne peuvent pas être oubliés.</li>
+<li>Composants métier à la racine de <code>components/</code>, primitives shadcn dans <code>components/ui/</code>.</li>
+</ul>
+<p><strong>Git</strong></p>
+<ul>
+<li>Messages en français, à l'impératif, décrivant l'intention :
+  <em>« Refuser le démarrage en production avec une configuration dangereuse »</em> — pas « fix config ».</li>
+<li>Commits de gros grain, correspondant à une capacité livrée.</li>
+</ul>
+<h2 id="113-les-arbitrages-dingenierie-et-leur-logique">11.3 Les arbitrages d'ingénierie, et leur logique</h2>
+<p>Le dépôt applique une doctrine repérable. Cinq principes :</p>
+<p><strong>1. Échouer bruyamment plutôt que fonctionner à moitié.</strong>
+Refus de démarrer en production avec une clé faible ; échec du job si l'envoi du rapport échoue ; refus d'un mot de passe de plus de 72 octets sur bcrypt plutôt que troncature silencieuse.</p>
+<p><strong>2. Choisir la primitive selon la menace, pas par habitude.</strong>
+Argon2id pour ce qu'un humain choisit, SHA-256 pour ce qu'une machine génère, SHA-1 pour un identifiant qui n'est pas un secret. Chaque choix est justifié en commentaire (§4.8).</p>
+<p><strong>3. Dériver plutôt que stocker.</strong>
+<code>User.status</code>, <code>has_mfa</code>, <code>webauthn_enabled</code> sont des propriétés calculées. Le score de conformité est recalculé à la lecture. Rien à resynchroniser, rien à re-scanner quand un barème change.</p>
+<p><strong>4. Dénormaliser là où la traçabilité l'exige.</strong>
+Les journaux d'audit copient <code>project_name</code>, <code>owner_id</code>, <code>finding_title</code>. C'est une entorse délibérée à la normalisation : un journal ne doit pas dépendre de la survie de ce qu'il documente.</p>
+<p><strong>5. Rendre les défauts rétro-compatibles.</strong>
+<code>fail_on_severity = null</code> par défaut : un projet existant ne se met pas à bloquer tout seul. Les hash bcrypt continuent d'être acceptés et migrent d'eux-mêmes.</p>
+<h2 id="114-la-strategie-de-test">11.4 La stratégie de test</h2>
+<ul>
+<li><strong>Tests d'API bout en bout</strong> via <code>TestClient</code>, sur une base SQLite <strong>en mémoire</strong> recréée à chaque test (<code>conftest.py</code>). Aucun test ne dépend de l'état laissé par un autre.</li>
+<li><strong>Tests unitaires purs</strong> pour la logique de calcul : <code>compute_score</code> et <code>exceeds_threshold</code> se testent sans base ni HTTP.</li>
+<li><strong>Un test par règle métier</strong>, nommé en langage naturel :
+  <code>test_cannot_demote_last_active_admin</code>, <code>test_user_without_project_access_sees_nothing</code>, <code>test_mfa_token_cannot_open_session</code>.</li>
+<li>Les cas négatifs sont testés autant que les positifs : révocation d'accès, dépassement de quota, portée de jeton incorrecte.</li>
+<li><strong>Commande</strong> : <code>cd backend &amp;&amp; pytest</code>. Résultat au moment de la rédaction : <strong>151 cas passants, 0 échec</strong>.</li>
+</ul>
+<h2 id="115-la-methode-de-documentation">11.5 La méthode de documentation</h2>
+<p>Quatre documents, quatre publics, aucune redondance (§ <em>Carte des documents</em>). Le principe suivi :</p>
+<ul>
+<li><strong>Toute affirmation chiffrée est vérifiée dans le code</strong> avant d'être écrite. Le nombre de routes de ce document, par exemple, a été recompté sur les décorateurs <code>@router.*</code>.</li>
+<li><strong>Les écarts entre documentation et code sont signalés</strong>, pas masqués. <code>SYNTHESE_ANALYSE.md</code> leur consacre une section entière.</li>
+<li><strong>Ce qui n'est pas fait est écrit</strong> aussi clairement que ce qui l'est (§15). Un lecteur ne doit pas découvrir une lacune en lisant le code.</li>
+</ul>
+<h2 id="116-le-cycle-de-developpement-observable">11.6 Le cycle de développement observable</h2>
+<p>D'après l'historique Git, le projet a été construit par capacités successives :</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Commit</th>
+<th>Capacité ajoutée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>14/07/2026</td>
+<td><code>d12824a</code></td>
+<td>Démo Terraform vulnérable + pipeline iac-guard</td>
+</tr>
+<tr>
+<td>12/08/2026</td>
+<td><code>1690db0</code></td>
+<td>Correction d'interface (menu déroulant des projets)</td>
+</tr>
+<tr>
+<td>22/08/2026</td>
+<td><code>ad45932</code></td>
+<td>Gestion des comptes par rôle, analyse SAST, documentation</td>
+</tr>
+<tr>
+<td>22/08/2026</td>
+<td><code>a2854f1</code></td>
+<td>Garde-fous de démarrage en production</td>
+</tr>
+</tbody>
+</table>
+<p>La progression va de la démonstration vers le durcissement — la dernière chose ajoutée est un mécanisme qui <strong>empêche</strong> un déploiement dangereux.</p>
+<hr />
+<h1 id="12-procedures-operationnelles">12. Procédures opérationnelles</h1>
+<h2 id="121-installer-lenvironnement-de-developpement">12.1 Installer l'environnement de développement</h2>
+<p>Prérequis : Docker et Node.js 20.</p>
+<pre><code class="language-bash"># 1. API + base PostgreSQL
+docker compose up -d --build
+docker compose logs -f api        # suivre le demarrage
+curl http://localhost:8000/health # doit repondre {&quot;status&quot;:&quot;ok&quot;,...}
+
+# 2. Tableau de bord
+cd frontend
+npm install
+npm run dev                       # http://localhost:3000
+</code></pre>
+<p>Points d'entrée : API sur <code>http://localhost:8000</code> (documentation interactive sur <code>/docs</code>), tableau de bord sur <code>http://localhost:3000</code>.</p>
+<h2 id="122-developper-sans-docker">12.2 Développer sans Docker</h2>
+<pre><code class="language-bash">cd backend
+pip install -r requirements-dev.txt
+uvicorn app.main:app --reload
+pytest
+</code></pre>
+<p>La base par défaut est alors SQLite (<code>./iacguard.db</code>), aucun service à lancer. Pour PostgreSQL, renseigner <code>DATABASE_URL</code> dans un <code>.env</code> (modèle commenté : <code>backend/.env.example</code>).</p>
+<h2 id="123-connecter-un-depot-client">12.3 Connecter un dépôt client</h2>
+<ol>
+<li><strong>Créer le projet</strong> depuis le tableau de bord (<code>/projects</code>) et <strong>copier le jeton affiché</strong>. Il ne sera plus jamais montré.</li>
+<li><strong>Copier deux choses</strong> dans le dépôt à analyser :
+   - <code>pipeline/github-actions-template/scan-standalone.yml</code> → <code>.github/workflows/</code> ;
+   - le contenu de <code>pipeline/aggregator/</code> → un dossier <code>.iacguard/</code>.</li>
+<li><strong>Déclarer les paramètres</strong> dans GitHub, sous <em>Settings → Secrets and variables → Actions</em> :
+   - secret <code>IAC_GUARD_TOKEN</code> = le jeton du projet ;
+   - variable <code>IAC_GUARD_API_URL</code> = l'URL publique de l'API, <strong>sans slash final</strong>.</li>
+<li><strong>Activer le blocage</strong> : protéger la branche principale en exigeant le <em>check</em> <code>scan</code>. Sans cette étape, le pipeline signale mais n'empêche rien.</li>
+<li><strong>Vérifier</strong> : déclencher un run avec le bouton « Run workflow », puis contrôler que le scan apparaît dans <code>/alerts</code>.</li>
+</ol>
+<h2 id="124-faire-tourner-un-jeton-de-projet">12.4 Faire tourner un jeton de projet</h2>
+<p>À faire dès qu'un jeton a pu fuiter (dépôt public, journal de CI, capture d'écran).</p>
+<ol>
+<li>Tableau de bord → <code>/projects</code> → le projet → <strong>Régénérer le jeton</strong>.</li>
+<li>Copier le nouveau jeton (affiché une seule fois).</li>
+<li>Le remplacer dans <em>Settings → Secrets and variables → Actions</em> du dépôt client.</li>
+<li>Déclencher un run pour vérifier.</li>
+</ol>
+<p>L'ancien jeton est invalidé immédiatement : <code>token_hash</code> est écrasé, et l'authentification échoue en <code>401</code> (« Token projet inconnu ou révoqué »).</p>
+<h2 id="125-inviter-un-collaborateur">12.5 Inviter un collaborateur</h2>
+<ol>
+<li><code>/admin</code> → <strong>Inviter</strong> → e-mail + rôle.</li>
+<li>Le compte est créé aussitôt, en statut <code>pending_invitation</code> (<code>hashed_password = NULL</code>).</li>
+<li>Le lien d'activation est <strong>journalisé par l'API</strong> (voir §4.10 — l'envoi d'e-mail n'est pas branché). Le récupérer avec :
+   <code>bash
+   docker compose logs api | grep -i invitation</code></li>
+<li>L'invité ouvre le lien, choisit un mot de passe : le compte passe <code>active</code>.</li>
+<li>Le lien expire après 72 heures. Ré-inviter réémet un jeton.</li>
+</ol>
+<p>Quota : 10 invitations par heure et par admin, comptées sur les entrées <code>user.invited</code> du journal d'administration.</p>
+<h2 id="126-donner-acces-a-un-projet">12.6 Donner accès à un projet</h2>
+<p>Pour un rôle <strong>sans</strong> accès global (<code>developer</code>, <code>auditor</code>, <code>viewer</code>) :</p>
+<ol>
+<li><code>/admin</code> → l'utilisateur → <strong>Accès aux projets</strong>.</li>
+<li>Cocher les projets, valider. C'est un <code>PUT</code> : la liste envoyée <strong>remplace</strong> l'ancienne.</li>
+<li>L'action est tracée dans le journal d'administration.</li>
+</ol>
+<p>Rappel : sans aucune ligne d'accès, un rôle non global ne voit <strong>aucun</strong> projet. Un <code>admin</code> ou un <code>security_lead</code> voit tous les projets de l'organisation sans configuration.</p>
+<h2 id="127-traiter-une-alerte">12.7 Traiter une alerte</h2>
+<ol>
+<li><code>/alerts</code> → filtrer par gravité, projet, catégorie ou statut.</li>
+<li>Ouvrir le panneau de détail : impact, scénario d'attaque, correctif, lien vers la ligne au commit scanné.</li>
+<li>Décider :
+   - <strong>Prise en compte</strong> — vue, correction planifiée ;
+   - <strong>Résolue</strong> — corrigée ;
+   - <strong>Faux positif</strong> — avec justification.</li>
+<li>La décision est enregistrée par empreinte : elle survit au scan suivant.</li>
+<li>Elle apparaît dans le journal de triage (<code>/settings</code>).</li>
+</ol>
+<p>Si une règle entière n'a pas lieu d'être sur ce projet (bucket public volontaire pour un CDN, par exemple), préférer une <strong>exception de règle</strong> dans <code>/projects</code> → <em>Politique</em> : les findings restent visibles mais ne comptent plus dans le score ni dans le blocage — et la justification est conservée pour l'audit.</p>
+<h2 id="128-deployer-en-production">12.8 Déployer en production</h2>
+<p><strong>Liste de contrôle avant démarrage</strong> — l'application refuse de démarrer si les deux premiers points ne sont pas remplis :</p>
+<pre><code class="language-bash"># 1. Generer une cle de signature
+python -c &quot;import secrets; print(secrets.token_urlsafe(48))&quot;
+</code></pre>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Variable</th>
+<th>Valeur exigée</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>SECRET_KEY</code></td>
+<td>≥ 32 caractères, jamais <code>dev-secret-change-me</code>. <strong>Refus de démarrer sinon.</strong></td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>COOKIE_SECURE</code></td>
+<td><code>true</code>. <strong>Refus de démarrer sinon.</strong></td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>ENVIRONMENT</code></td>
+<td><code>production</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td><code>DATABASE_URL</code></td>
+<td><code>postgresql+psycopg://…</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td><code>CORS_ORIGINS</code></td>
+<td>Le domaine réel du tableau de bord, liste explicite</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>WEBAUTHN_RP_ID</code></td>
+<td>Le domaine du <strong>frontend</strong> (pas celui de l'API)</td>
+</tr>
+<tr>
+<td>7</td>
+<td><code>WEBAUTHN_ORIGINS</code></td>
+<td>L'origine exacte, en <code>https://</code></td>
+</tr>
+<tr>
+<td>8</td>
+<td><code>FRONTEND_URL</code></td>
+<td>Base des liens d'invitation</td>
+</tr>
+<tr>
+<td>9</td>
+<td><code>NEXT_PUBLIC_API_URL</code></td>
+<td>Côté frontend : URL publique de l'API</td>
+</tr>
+</tbody>
+</table>
+<p>Points restant à traiter avant un vrai déploiement (§15) : les migrations Alembic à la place de <code>create_all</code>, un service d'e-mail transactionnel, une limitation de débit sur <code>POST /api/scans</code>.</p>
+<h2 id="129-sauvegarder-et-restaurer">12.9 Sauvegarder et restaurer</h2>
+<pre><code class="language-bash"># Sauvegarde PostgreSQL
+docker compose exec db pg_dump -U iacguard iacguard &gt; sauvegarde-$(date +%F).sql
+
+# Restauration
+cat sauvegarde-2026-09-15.sql | docker compose exec -T db psql -U iacguard -d iacguard
+</code></pre>
+<p><code>docker compose down</code> conserve le volume <code>pgdata</code>. <code>docker compose down -v</code> <strong>l'efface</strong>.</p>
+<h2 id="1210-diagnostiquer-une-panne">12.10 Diagnostiquer une panne</h2>
+<table>
+<thead>
+<tr>
+<th>Symptôme</th>
+<th>Cause probable</th>
+<th>Vérification</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Le job GitHub s'arrête sur « API injoignable »</td>
+<td>Tunnel arrêté, URL périmée, <code>\r\n</code> collé dans la variable</td>
+<td><code>curl {API_URL}/health</code></td>
+</tr>
+<tr>
+<td><code>401 Token projet inconnu ou révoqué</code></td>
+<td>Jeton tourné et non mis à jour côté GitHub</td>
+<td>Comparer le préfixe affiché dans <code>/projects</code></td>
+</tr>
+<tr>
+<td>Le scan arrive mais le pipeline reste vert</td>
+<td><code>fail_on_severity</code> est <code>null</code>, ou le <em>check</em> <code>scan</code> n'est pas exigé par la protection de branche</td>
+<td><code>/projects</code> → <em>Politique</em> ; réglages GitHub</td>
+</tr>
+<tr>
+<td>Le tableau de bord affiche « Impossible de joindre le serveur »</td>
+<td>API arrêtée, ou origine absente de <code>CORS_ORIGINS</code></td>
+<td>Console du navigateur, <code>docker compose logs api</code></td>
+</tr>
+<tr>
+<td>L'API refuse de démarrer</td>
+<td>Garde-fou de production déclenché</td>
+<td>Lire le message : il nomme la variable fautive</td>
+</tr>
+<tr>
+<td>L'enrôlement WebAuthn échoue</td>
+<td><code>WEBAUTHN_RP_ID</code> ne correspond pas au domaine du frontend</td>
+<td>Comparer les deux valeurs</td>
+</tr>
+<tr>
+<td>Un code TOTP valide est refusé</td>
+<td>Dérive d'horloge &gt; 30 s</td>
+<td>Synchroniser l'horloge du téléphone</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h1 id="13-tests">13. Tests</h1>
+<h2 id="131-resultat">13.1 Résultat</h2>
+<pre><code>$ cd backend &amp;&amp; pytest
+........................................................................ [ 47%]
+........................................................................ [ 95%]
+.......                                                                  [100%]
+151 passed
+</code></pre>
+<p>131 fonctions de test, 151 cas exécutés (l'écart vient des tests paramétrés).</p>
+<h2 id="132-infrastructure">13.2 Infrastructure</h2>
+<p><code>backend/tests/conftest.py</code> :</p>
+<ul>
+<li>base <strong>SQLite en mémoire</strong>, recréée pour chaque test ;</li>
+<li><code>Base.metadata.create_all</code> avant, <code>drop_all</code> après ;</li>
+<li><code>get_db</code> surchargé par <code>app.dependency_overrides</code> ;</li>
+<li>un <code>TestClient</code> FastAPI par test.</li>
+</ul>
+<p>Conséquence : aucune fuite d'état entre tests, aucun besoin de base externe, exécution en quelques secondes.</p>
+<h2 id="133-repartition">13.3 Répartition</h2>
+<table>
+<thead>
+<tr>
+<th>Fichier</th>
+<th>Fonctions</th>
+<th>Domaine couvert</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>test_auth.py</code></td>
+<td>30</td>
+<td>Inscription, connexion, verrouillage, énumération, portées de JWT</td>
+</tr>
+<tr>
+<td><code>test_api.py</code></td>
+<td>25</td>
+<td>Ingestion, lecture, cloisonnement, projets</td>
+</tr>
+<tr>
+<td><code>test_admin.py</code></td>
+<td>18</td>
+<td>Invitations, rôles, statuts, accès projets, quotas, dernier admin</td>
+</tr>
+<tr>
+<td><code>test_2fa.py</code></td>
+<td>16</td>
+<td>WebAuthn, TOTP, codes de récupération</td>
+</tr>
+<tr>
+<td><code>test_scan_policy.py</code></td>
+<td>9</td>
+<td>Seuil de blocage, exceptions de règles</td>
+</tr>
+<tr>
+<td><code>test_triage.py</code></td>
+<td>7</td>
+<td>Les quatre statuts, persistance par empreinte</td>
+</tr>
+<tr>
+<td><code>test_scoring.py</code></td>
+<td>7</td>
+<td>Barème, grades, saturation à 0</td>
+</tr>
+<tr>
+<td><code>test_profile.py</code></td>
+<td>6</td>
+<td>Profil, changement de mot de passe</td>
+</tr>
+<tr>
+<td><code>test_audit_log.py</code></td>
+<td>6</td>
+<td>Journaux append-only</td>
+</tr>
+<tr>
+<td><code>test_security.py</code></td>
+<td>4</td>
+<td>Hachage, migration bcrypt → Argon2, portées</td>
+</tr>
+<tr>
+<td><code>test_aggregates.py</code></td>
+<td>3</td>
+<td>Comptages par gravité, exclusions</td>
+</tr>
+</tbody>
+</table>
+<h2 id="134-ce-qui-nest-pas-couvert">13.4 Ce qui n'est pas couvert</h2>
+<p>À dire explicitement plutôt que laisser découvrir :</p>
+<ul>
+<li><strong>Aucun test frontend</strong> — ni unitaire, ni de composant, ni de bout en bout.</li>
+<li><strong>Aucun test de l'agrégateur</strong> — les <em>parsers</em> des quatre formats ne sont pas testés, alors que <code>pipeline/aggregator/samples/</code> contient précisément les échantillons qui le permettraient.</li>
+<li><strong>Aucune intégration continue sur ce dépôt</strong> — les tests existent mais rien ne les exécute automatiquement. Le projet analyse la CI des autres sans en avoir une.</li>
+<li><strong>Aucun test sur PostgreSQL</strong> — tout tourne sur SQLite ; les écarts de comportement (fuseaux horaires, types JSON) ne sont pas exercés.</li>
+</ul>
+<hr />
+<h1 id="14-configuration-de-reference">14. Configuration de référence</h1>
+<h2 id="141-backend-classe-settings">14.1 Backend — classe <code>Settings</code></h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Défaut</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>APP_NAME</code></td>
+<td><code>iac-guard</code></td>
+<td>Nom affiché, titre OpenAPI</td>
+</tr>
+<tr>
+<td><code>ENVIRONMENT</code></td>
+<td><code>development</code></td>
+<td><code>production</code> active les garde-fous bloquants</td>
+</tr>
+<tr>
+<td><code>DATABASE_URL</code></td>
+<td><code>sqlite:///./iacguard.db</code></td>
+<td>Base de données</td>
+</tr>
+<tr>
+<td><code>SECRET_KEY</code></td>
+<td><code>dev-secret-change-me</code></td>
+<td>Signature des JWT. ≥ 32 caractères en production</td>
+</tr>
+<tr>
+<td><code>ACCESS_TOKEN_EXPIRE_MINUTES</code></td>
+<td><code>1440</code></td>
+<td>Durée d'une session (24 h)</td>
+</tr>
+<tr>
+<td><code>CORS_ORIGINS</code></td>
+<td><code>["http://localhost:5173","http://localhost:3000"]</code></td>
+<td>Liste explicite, jamais <code>*</code></td>
+</tr>
+<tr>
+<td><code>SESSION_COOKIE_NAME</code></td>
+<td><code>iacguard_session</code></td>
+<td>Cookie de session</td>
+</tr>
+<tr>
+<td><code>MFA_COOKIE_NAME</code></td>
+<td><code>iacguard_mfa</code></td>
+<td>Cookie intermédiaire 2FA</td>
+</tr>
+<tr>
+<td><code>COOKIE_SECURE</code></td>
+<td><code>false</code></td>
+<td><code>true</code> obligatoire en production</td>
+</tr>
+<tr>
+<td><code>COOKIE_SAMESITE</code></td>
+<td><code>lax</code></td>
+<td>Protection CSRF</td>
+</tr>
+<tr>
+<td><code>MFA_TOKEN_EXPIRE_MINUTES</code></td>
+<td><code>5</code></td>
+<td>Durée du jeton <code>mfa</code></td>
+</tr>
+<tr>
+<td><code>MAX_LOGIN_ATTEMPTS</code></td>
+<td><code>5</code></td>
+<td>Seuil de verrouillage</td>
+</tr>
+<tr>
+<td><code>LOCKOUT_MINUTES</code></td>
+<td><code>15</code></td>
+<td>Durée du verrou</td>
+</tr>
+<tr>
+<td><code>WEBAUTHN_RP_ID</code></td>
+<td><code>localhost</code></td>
+<td>Domaine du <strong>frontend</strong></td>
+</tr>
+<tr>
+<td><code>WEBAUTHN_RP_NAME</code></td>
+<td><code>iac-guard</code></td>
+<td>Nom affiché à l'enrôlement, émetteur TOTP</td>
+</tr>
+<tr>
+<td><code>WEBAUTHN_ORIGINS</code></td>
+<td><code>["http://localhost:3000"]</code></td>
+<td>Origines autorisées</td>
+</tr>
+<tr>
+<td><code>FRONTEND_URL</code></td>
+<td><code>http://localhost:3000</code></td>
+<td>Base des liens d'invitation</td>
+</tr>
+<tr>
+<td><code>INVITATION_EXPIRE_HOURS</code></td>
+<td><code>72</code></td>
+<td>Durée de validité d'une invitation</td>
+</tr>
+<tr>
+<td><code>MAX_INVITES_PER_HOUR</code></td>
+<td><code>10</code></td>
+<td>Quota par admin</td>
+</tr>
+</tbody>
+</table>
+<p>Chargement : variables d'environnement, puis fichier <code>.env</code>, <code>extra="ignore"</code>.</p>
+<h2 id="142-frontend">14.2 Frontend</h2>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Défaut</th>
+<th>Rôle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>NEXT_PUBLIC_API_URL</code></td>
+<td><code>http://localhost:8000</code></td>
+<td>Base de l'API. Le slash final est retiré automatiquement</td>
+</tr>
+</tbody>
+</table>
+<p>Fichier local : <code>frontend/.env.local</code>.</p>
+<h2 id="143-ports-et-reseau">14.3 Ports et réseau</h2>
+<table>
+<thead>
+<tr>
+<th>Service</th>
+<th>Port</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>API</td>
+<td>8000</td>
+<td><code>/health</code>, <code>/docs</code></td>
+</tr>
+<tr>
+<td>Tableau de bord</td>
+<td>3000</td>
+<td>Doit figurer dans <code>CORS_ORIGINS</code></td>
+</tr>
+<tr>
+<td>PostgreSQL</td>
+<td>5432</td>
+<td>Exposé par Compose pour le développement</td>
+</tr>
+</tbody>
+</table>
+<p>Dans Compose, l'API joint la base par le nom de service <code>db</code>, résolu par le DNS interne. Le démarrage de l'API attend le <em>healthcheck</em> <code>pg_isready</code>.</p>
+<hr />
+<h1 id="15-limites-connues-et-suite">15. Limites connues et suite</h1>
+<h2 id="151-travaux-en-cours-annonces-par-le-readme">15.1 Travaux en cours annoncés par le README</h2>
+<table>
+<thead>
+<tr>
+<th>Chantier</th>
+<th>État réel dans le code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Moteur de conformité CNDP (loi 09-08) / Bank Al-Maghrib</td>
+<td><strong>Non commencé.</strong> Les référentiels affichés dans l'interface sont des valeurs de démonstration. Le schéma unifié réserve la place : l'enrichissement se fera côté backend à partir de <code>rule_id</code></td>
+</tr>
+<tr>
+<td>Export PDF des rapports</td>
+<td>Non implémenté</td>
+</tr>
+<tr>
+<td>Révision du score</td>
+<td>Le barème sature à 0 dès quatre findings critiques (§9.2)</td>
+</tr>
+<tr>
+<td>Envoi des e-mails d'invitation</td>
+<td><code>services/email.py</code> journalise le lien, ne l'envoie pas</td>
+</tr>
+<tr>
+<td>Migrations Alembic</td>
+<td><code>create_all</code> au démarrage, aucun contrôle de version de schéma</td>
+</tr>
+</tbody>
+</table>
+<h2 id="152-autres-elements-incomplets-identifies-dans-le-code">15.2 Autres éléments incomplets identifiés dans le code</h2>
+<ul>
+<li><strong><code>POST /api/auth/forgot-password</code></strong> répond toujours <code>202</code> et ne fait rien. Le formulaire existe côté interface.</li>
+<li><strong>Conftest / OPA</strong> : parser complet, énumération présente, workflow prêt — mais <code>policies/</code> est vide et le workflow recommandé ne l'appelle pas. Le support est donc inactif en pratique.</li>
+<li><strong>Version de Checkov non épinglée</strong> (<code>pip install checkov</code>) alors que Gitleaks et Semgrep le sont. Un scan peut changer de résultat sans qu'aucun code n'ait bougé.</li>
+<li><strong>i18n partielle</strong> : français et arabe couvrent les écrans d'authentification ; le reste de l'application est en français seulement.</li>
+</ul>
+<h2 id="153-limites-techniques-structurelles">15.3 Limites techniques structurelles</h2>
+<ul>
+<li><strong><code>GET /api/alerts</code> fait une requête par projet</strong> puis trie et pagine <strong>en mémoire Python</strong>. Correct pour quelques dizaines de projets, à revoir au-delà.</li>
+<li><strong>Le fingerprint dépend du numéro de ligne</strong> : un décalage de ligne casse le suivi d'un problème (§9.1).</li>
+<li><strong>Pas de révocation de session</strong> : un JWT volé reste valide jusqu'à 24 h.</li>
+<li><strong>Aucune limitation de débit sur l'ingestion</strong> : un jeton fuité permet d'inonder la base de scans.</li>
+<li><strong>Le secret TOTP est stocké en clair.</strong></li>
+</ul>
+<h2 id="154-ordre-de-priorite-suggere">15.4 Ordre de priorité suggéré</h2>
+<ol>
+<li>Épingler la version de Checkov — une ligne, supprime une source de non-reproductibilité.</li>
+<li>Ajouter une intégration continue qui exécute <code>pytest</code> sur ce dépôt — la crédibilité d'un outil de CI en dépend.</li>
+<li>Tester l'agrégateur avec les échantillons déjà présents dans <code>samples/</code>.</li>
+<li>Passer à Alembic avant tout déploiement réel.</li>
+<li>Brancher un service d'e-mail transactionnel, ce qui débloque aussi la réinitialisation de mot de passe.</li>
+<li>Revoir le barème du score (échelle logarithmique ou plafond par gravité).</li>
+</ol>
+<hr />
+<h1 id="16-glossaire">16. Glossaire</h1>
+<table>
+<thead>
+<tr>
+<th>Terme</th>
+<th>Définition</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Agrégateur</strong></td>
+<td>Le script Python du pipeline qui convertit les sorties des scanners en un schéma unique et les envoie à l'API.</td>
+</tr>
+<tr>
+<td><strong>Argon2id</strong></td>
+<td>Fonction de hachage de mots de passe <em>memory-hard</em>, recommandée par l'OWASP. Rend le cassage massif sur GPU coûteux.</td>
+</tr>
+<tr>
+<td><strong>CTAP2</strong></td>
+<td>Protocole entre le navigateur et l'authentificateur (clé USB, TPM), sous-jacent à WebAuthn.</td>
+</tr>
+<tr>
+<td><strong>Empreinte / fingerprint</strong></td>
+<td>Identifiant déterministe d'un problème, calculé sur son identité (outil, règle, fichier, ligne, ressource). Permet de le suivre d'un scan à l'autre.</td>
+</tr>
+<tr>
+<td><strong>Exception de règle</strong></td>
+<td>Décision d'ignorer <strong>toute</strong> occurrence d'une règle sur un projet, avec justification. Différent du triage.</td>
+</tr>
+<tr>
+<td><strong>Finding</strong></td>
+<td>Un problème détecté par un scanner, normalisé au schéma unifié.</td>
+</tr>
+<tr>
+<td><strong>HCL2</strong></td>
+<td>Langage de configuration de Terraform.</td>
+</tr>
+<tr>
+<td><strong>IaC</strong></td>
+<td><em>Infrastructure as Code</em> — décrire l'infrastructure en fichiers versionnés plutôt qu'en clics dans une console.</td>
+</tr>
+<tr>
+<td><strong>JWT</strong></td>
+<td><em>JSON Web Token</em> — jeton signé portant l'identité et la portée. Ici HS256.</td>
+</tr>
+<tr>
+<td><strong>Passkey</strong></td>
+<td>Identifiant WebAuthn découvrable, permettant de se connecter sans saisir d'e-mail.</td>
+</tr>
+<tr>
+<td><strong>Portée / scope</strong></td>
+<td>Champ du JWT distinguant une session complète (<code>session</code>) d'une étape 2FA (<code>mfa</code>).</td>
+</tr>
+<tr>
+<td><strong>RBAC</strong></td>
+<td><em>Role-Based Access Control</em> — droits attribués par rôle. Ici cinq rôles.</td>
+</tr>
+<tr>
+<td><strong>Rego</strong></td>
+<td>Langage de règles d'Open Policy Agent, utilisé par Conftest.</td>
+</tr>
+<tr>
+<td><strong>SAST</strong></td>
+<td><em>Static Application Security Testing</em> — analyse du code source sans l'exécuter.</td>
+</tr>
+<tr>
+<td><strong>Scan</strong></td>
+<td>Un rapport reçu du pipeline pour un projet, à un commit donné.</td>
+</tr>
+<tr>
+<td><strong>Seuil de blocage</strong></td>
+<td><code>fail_on_severity</code> : gravité à partir de laquelle le pipeline échoue.</td>
+</tr>
+<tr>
+<td><strong>Sign count</strong></td>
+<td>Compteur incrémenté par un authentificateur WebAuthn à chaque usage. Sa régression signale un clonage.</td>
+</tr>
+<tr>
+<td><strong>TOTP</strong></td>
+<td><em>Time-based One-Time Password</em> (RFC 6238) — le code à 6 chiffres qui change toutes les 30 secondes.</td>
+</tr>
+<tr>
+<td><strong>Triage</strong></td>
+<td>Décision d'un analyste sur une alerte : ouverte, prise en compte, résolue, faux positif.</td>
+</tr>
+<tr>
+<td><strong>WebAuthn</strong></td>
+<td>Standard W3C d'authentification par clé cryptographique liée à l'appareil, résistante au <em>phishing</em>.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>Document rédigé le 15 septembre 2026 à partir d'une relecture du dépôt à l'état du commit <code>a2854f1</code>. Chaque chiffre cité a été vérifié dans le code ; la suite de tests a été exécutée pour valider le résultat annoncé.</em></p>
+</section>
+
+</body>
+</html>

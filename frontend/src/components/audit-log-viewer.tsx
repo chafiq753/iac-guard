@@ -127,7 +127,7 @@ export function AuditLogViewer() {
               ) : (
                 data.items.map((entry) => (
                   <TableRow key={entry.id}>
-                    <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                    <TableCell className="text-sm text-muted-foreground whitespace-normal">
                       {new Date(entry.created_at).toLocaleString("fr-FR", {
                         day: "numeric",
                         month: "short",
@@ -139,18 +139,18 @@ export function AuditLogViewer() {
                     <TableCell className="text-sm font-medium">
                       {entry.project_name}
                     </TableCell>
-                    <TableCell className="max-w-64 truncate text-sm" title={entry.finding_title}>
+                    <TableCell className="min-w-32 whitespace-normal text-sm" title={entry.finding_title}>
                       {entry.finding_title}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex flex-wrap items-center gap-1.5">
                         <StatusBadge status={entry.from_status as AlertStatus} />
                         <span className="text-muted-foreground">→</span>
                         <StatusBadge status={entry.to_status as AlertStatus} />
                       </div>
                     </TableCell>
-                    <TableCell className="max-w-48 truncate text-sm text-muted-foreground" title={entry.note ?? undefined}>
-                      {entry.note ?? "—"}
+                    <TableCell className="text-sm text-muted-foreground" title={entry.note ?? undefined}>
+                      <div className="max-w-28 truncate">{entry.note ?? "—"}</div>
                     </TableCell>
                   </TableRow>
                 ))

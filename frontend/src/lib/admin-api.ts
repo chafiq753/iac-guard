@@ -45,6 +45,8 @@ export const ACTION_LABELS: Record<string, string> = {
   "user.disabled": "Compte désactivé",
   "user.webauthn_reset": "Biométrie réinitialisée",
   "user.project_access_updated": "Accès aux projets modifié",
+  "policy.exception_added": "Exception ajoutée",
+  "policy.exception_removed": "Exception retirée",
 };
 
 export interface AdminUser {

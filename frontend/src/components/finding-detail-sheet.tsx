@@ -21,8 +21,10 @@ import {
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { SeverityBadge, StatusBadge } from "@/components/severity-badge";
+import { Textarea } from "@/components/ui/textarea";
+import { ExceptionBadge, SeverityBadge, StatusBadge } from "@/components/severity-badge";
 import {
   CATEGORY_LABELS,
   SOURCE_LABELS,
@@ -30,7 +32,7 @@ import {
 } from "@/lib/finding-explainer";
 import type { Alert, AlertStatus } from "@/lib/data";
 
-type OnTriage = (alert: Alert, status: AlertStatus) => void;
+type OnTriage = (alert: Alert, status: AlertStatus, note?: string) => void;
 
 /** Checkov préfixe ses chemins d'un "/" — ni GitHub ni l'affichage n'en veulent. */
 function cleanPath(file: string): string {
@@ -80,7 +82,18 @@ export function FindingDetailSheet({
   onOpenChange: (open: boolean) => void;
   onTriage?: OnTriage;
 }) {
+  // Justification jointe à la décision (tracée dans le journal d'audit).
+  // Vidée à chaque changement de finding (ajustement d'état pendant le rendu).
+  const [note, setNote] = React.useState("");
+  const [noteFor, setNoteFor] = React.useState(alert?.id);
+  if (noteFor !== alert?.id) {
+    setNoteFor(alert?.id);
+    setNote("");
+  }
+
   if (!alert) return null;
+
+  const decide = (status: AlertStatus) => onTriage?.(alert, status, note.trim() || undefined);
 
   const codeLocation = locationLabel(alert);
   const codeHref = codeUrl(alert);
@@ -97,6 +110,7 @@ export function FindingDetailSheet({
           <div className="flex flex-wrap items-center gap-2">
             <SeverityBadge severity={alert.severity} />
             <StatusBadge status={alert.status} />
+            {alert.excepted ? <ExceptionBadge /> : null}
           </div>
           <SheetTitle className="text-left text-base leading-snug">
             {alert.title}
@@ -216,22 +230,35 @@ export function FindingDetailSheet({
 
           <Separator />
 
-          {/* --- Actions de triage --- */}
+          {/* --- Actions de triage (absentes pour les rôles en lecture seule) --- */}
+          {onTriage ? (
           <div className="space-y-2">
             <h3 className="text-sm font-semibold">Actions</h3>
+            <div className="space-y-1.5">
+              <Label htmlFor="triage-note" className="text-xs">
+                Note / justification
+              </Label>
+              <Textarea
+                id="triage-note"
+                placeholder="ex. Risque accepté : base isolée dans un VPC privé, revue au T1"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                maxLength={2000}
+              />
+            </div>
             <div className="flex flex-wrap gap-2">
               {alert.status === "open" ? (
                 <>
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onTriage?.(alert, "acknowledged")}
+                    onClick={() => decide("acknowledged")}
                   >
                     Acknowledge
                   </Button>
                   <Button
                     size="sm"
-                    onClick={() => onTriage?.(alert, "resolved")}
+                    onClick={() => decide("resolved")}
                   >
                     <Check className="size-4" />
                     Marquer résolu
@@ -239,7 +266,7 @@ export function FindingDetailSheet({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onTriage?.(alert, "false_positive")}
+                    onClick={() => decide("false_positive")}
                   >
                     Faux positif
                   </Button>
@@ -249,7 +276,7 @@ export function FindingDetailSheet({
                   {alert.status === "acknowledged" ? (
                     <Button
                       size="sm"
-                      onClick={() => onTriage?.(alert, "resolved")}
+                      onClick={() => decide("resolved")}
                     >
                       <Check className="size-4" />
                       Marquer résolu
@@ -258,7 +285,7 @@ export function FindingDetailSheet({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => onTriage?.(alert, "open")}
+                    onClick={() => decide("open")}
                   >
                     <Undo2 className="size-4" />
                     Ré-ouvrir
@@ -267,6 +294,7 @@ export function FindingDetailSheet({
               )}
             </div>
           </div>
+          ) : null}
         </div>
       </SheetContent>
     </Sheet>

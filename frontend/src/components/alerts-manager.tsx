@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { Alert, AlertStatus } from "@/lib/data";
+import { useAuth } from "@/components/auth-provider";
+import { canTriage } from "@/lib/permissions";
 import {
   platformApi,
   type FindingWithProject,
@@ -72,6 +74,7 @@ function toAlert(f: FindingWithProject): Alert {
     lineStart: f.line_start,
     lineEnd: f.line_end,
     commitSha: f.commit_sha,
+    excepted: f.excepted,
   };
 }
 
@@ -81,6 +84,8 @@ function toAlert(f: FindingWithProject): Alert {
  * « Agrandir » du dashboard ou le lien « Alertes » de la sidebar.
  */
 export function AlertsManager() {
+  const { user } = useAuth();
+  const triageAllowed = canTriage(user?.role);
   const params = useSearchParams();
   const projectFromUrl = params.get("project");
   // Terme de recherche venu du header (?q=...) : filtre le texte des alertes.
@@ -117,13 +122,14 @@ export function AlertsManager() {
     return () => clearInterval(interval);
   }, [load]);
 
-  async function onTriage(alert: Alert, status: AlertStatus) {
+  async function onTriage(alert: Alert, status: AlertStatus, note?: string) {
     if (alert.findingId === undefined || alert.scanId === undefined) return;
     try {
       const updated = await platformApi.triageFinding(
         alert.scanId,
         alert.findingId,
-        status
+        status,
+        note
       );
       setItems((prev) =>
         prev
@@ -266,7 +272,7 @@ export function AlertsManager() {
 
       <AlertsDataTable
         alerts={alerts}
-        onTriage={(a, s) => void onTriage(a, s)}
+        onTriage={triageAllowed ? (a, s) => void onTriage(a, s) : undefined}
         onRowClick={setSelectedAlert}
         showProjectColumn
         pageSize={15}
@@ -282,7 +288,7 @@ export function AlertsManager() {
         alert={selectedAlert}
         open={selectedAlert !== null}
         onOpenChange={(open) => !open && setSelectedAlert(null)}
-        onTriage={(a, s) => void onTriage(a, s)}
+        onTriage={triageAllowed ? (a, s, n) => void onTriage(a, s, n) : undefined}
       />
     </div>
   );

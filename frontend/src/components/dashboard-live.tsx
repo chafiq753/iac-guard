@@ -24,6 +24,8 @@ import {
 import { toast } from "sonner";
 
 import type { ActivityPoint, Alert, AlertStatus, Kpi } from "@/lib/data";
+import { useAuth } from "@/components/auth-provider";
+import { canTriage } from "@/lib/permissions";
 import {
   platformApi,
   type FindingOut,
@@ -52,6 +54,8 @@ interface DashboardData {
 }
 
 export function DashboardLive() {
+  const { user } = useAuth();
+  const triageAllowed = canTriage(user?.role);
   const params = useSearchParams();
   const requestedId = params.get("project");
 
@@ -322,15 +326,17 @@ export function DashboardLive() {
     lineStart: f.line_start,
     lineEnd: f.line_end,
     commitSha: latest.commit_sha,
+    excepted: f.excepted,
   }));
 
-  async function onTriage(alert: Alert, status: AlertStatus) {
+  async function onTriage(alert: Alert, status: AlertStatus, note?: string) {
     if (alert.findingId === undefined || alert.scanId === undefined) return;
     try {
       const updated = await platformApi.triageFinding(
         alert.scanId,
         alert.findingId,
-        status
+        status,
+        note
       );
       // Mise à jour locale immédiate, sans re-fetch complet.
       setData((prev) =>
@@ -371,7 +377,7 @@ export function DashboardLive() {
 
       <AlertsDataTable
         alerts={alerts}
-        onTriage={(a, s) => void onTriage(a, s)}
+        onTriage={triageAllowed ? (a, s) => void onTriage(a, s) : undefined}
         onRowClick={setSelectedAlert}
         headerAction={
           <Button
@@ -390,7 +396,7 @@ export function DashboardLive() {
         alert={selectedAlert}
         open={selectedAlert !== null}
         onOpenChange={(open) => !open && setSelectedAlert(null)}
-        onTriage={(a, s) => void onTriage(a, s)}
+        onTriage={triageAllowed ? (a, s, n) => void onTriage(a, s, n) : undefined}
       />
     </div>
   );

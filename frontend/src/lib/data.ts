@@ -40,6 +40,8 @@ export interface Alert {
   lineEnd?: number | null;
   /** Commit de détection, pour lier vers la ligne telle qu'elle était alors. */
   commitSha?: string | null;
+  /** Couvert par une exception de politique (règle ignorée). */
+  excepted?: boolean;
 }
 
 export interface Kpi {

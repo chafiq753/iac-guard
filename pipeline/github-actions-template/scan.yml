@@ -8,7 +8,8 @@
 #      - Secret   IACGUARD_TOKEN    = le token du projet (iacg_...)
 #      - Variable IACGUARD_API_URL  = l'URL de ton API (ex: https://api.iac-guard.ma)
 #
-#  Ce workflow se déclenche tout seul à chaque push / pull request. Il :
+#  Ce workflow se déclenche à chaque push / pull request, ou à la main
+#  (onglet Actions > « Run workflow »). Il :
 #    1. lance Gitleaks, Checkov, Conftest et Semgrep,
 #    2. normalise leurs résultats (aggregator),
 #    3. les envoie à l'API iac-guard.
@@ -17,6 +18,7 @@
 name: iac-guard scan
 
 on:
+  workflow_dispatch:      # bouton « Run workflow » dans l'onglet Actions
   push:
   pull_request:
 
@@ -45,6 +47,25 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
+      # ------------------------------------------------------------------ #
+      # Vérifier que l'API répond AVANT de lancer les scanners : mieux vaut
+      # échouer ici, avec un message clair, qu'après 3 minutes de scan.
+      # ------------------------------------------------------------------ #
+      - name: Vérifier que l'API est joignable
+        env:
+          RAW_API_URL: ${{ vars.IACGUARD_API_URL }}
+        run: |
+          # Un copier-coller depuis Windows colle facilement un \r\n invisible
+          # à la fin de la variable : on nettoie espaces et retours à la
+          # ligne, puis on retire un éventuel / final.
+          API_URL="$(printf '%s' "$RAW_API_URL" | tr -d '[:space:]' | sed 's:/*$::')"
+          if [ -z "$API_URL" ]; then
+            echo "::error::La variable IACGUARD_API_URL n'est pas définie."
+            exit 1
+          fi
+          curl -fsS --max-time 20 "$API_URL/health" \
+            || { echo "::error::API injoignable ($API_URL). Tunnel arrêté ou URL périmée ?"; exit 1; }
 
       # ------------------------------------------------------------------ #
       # 2. Les 4 scanners. `continue-on-error: true` : un scanner qui trouve
