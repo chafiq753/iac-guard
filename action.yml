@@ -1,0 +1,103 @@
+name: "iac-guard"
+description: "Scan de sécurité IaC : secrets (Gitleaks), mauvaises configurations (Checkov) et code (Semgrep), avec score et blocage de PR."
+author: "Chafiq Boulghallat"
+branding:
+  icon: "shield"
+  color: "green"
+
+# Utilisation, dans le workflow d'un dépôt :
+#
+#   - uses: actions/checkout@v4
+#     with:
+#       fetch-depth: 0            # Gitleaks lit tout l'historique Git
+#   - uses: chafiq753/iac-guard@v1
+#     with:
+#       fail-on: high
+#
+# Le job échoue si un problème atteint `fail-on` : rendre ce job obligatoire
+# (protection de branche) grise le bouton Merge.
+
+inputs:
+  path:
+    description: "Dossier à scanner, relatif à la racine du dépôt."
+    default: "."
+  fail-on:
+    description: "Gravité qui fait échouer le scan : critical, high, medium, low, info ou none."
+    default: "high"
+  tools:
+    description: "Scanners à lancer, séparés par des virgules."
+    default: "gitleaks,checkov,semgrep"
+  strict:
+    description: "Échouer si un scanner n'a pas pu tourner (true/false)."
+    default: "true"
+  report:
+    description: "Fichier où écrire le rapport JSON."
+    default: "iacguard-report.json"
+  gitleaks-version:
+    description: "Version de Gitleaks à installer."
+    default: "8.21.2"
+
+outputs:
+  score:
+    description: "Score de 0 à 100."
+    value: ${{ steps.scan.outputs.score }}
+  grade:
+    description: "Note de A à F."
+    value: ${{ steps.scan.outputs.grade }}
+  blocked:
+    description: "true si le scan bloque."
+    value: ${{ steps.scan.outputs.blocked }}
+  findings:
+    description: "Nombre total de problèmes."
+    value: ${{ steps.scan.outputs.findings }}
+  report:
+    description: "Chemin du rapport JSON."
+    value: ${{ inputs.report }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    # Environnement isolé : les dépendances de Checkov/Semgrep ne se mélangent
+    # pas avec celles du projet de l'utilisateur.
+    - name: Installer iac-guard et les scanners
+      shell: bash
+      env:
+        GITLEAKS_VERSION: ${{ inputs.gitleaks-version }}
+        ACTION_PATH: ${{ github.action_path }}
+      run: |
+        set -euo pipefail
+        VENV="$RUNNER_TEMP/iacguard-venv"
+        python -m venv "$VENV"
+        "$VENV/bin/pip" install --quiet --upgrade pip
+        "$VENV/bin/pip" install --quiet "$ACTION_PATH" checkov semgrep
+        echo "$VENV/bin" >> "$GITHUB_PATH"
+
+        mkdir -p "$RUNNER_TEMP/bin"
+        curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+          | tar -xz -C "$RUNNER_TEMP/bin" gitleaks
+        echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+    - name: Vérifier les scanners
+      shell: bash
+      run: iacguard doctor || true
+
+    - name: Scan iac-guard
+      id: scan
+      shell: bash
+      env:
+        IN_PATH: ${{ inputs.path }}
+        IN_FAIL_ON: ${{ inputs.fail-on }}
+        IN_TOOLS: ${{ inputs.tools }}
+        IN_STRICT: ${{ inputs.strict }}
+        IN_REPORT: ${{ inputs.report }}
+      # Les entrées passent par des variables d'environnement, jamais
+      # directement dans le script : pas d'injection de commande possible.
+      run: |
+        set -uo pipefail
+        args=(scan "$IN_PATH" --fail-on "$IN_FAIL_ON" --tools "$IN_TOOLS" -f json -o "$IN_REPORT")
+        if [ "$IN_STRICT" = "true" ]; then args+=(--strict); fi
+        iacguard "${args[@]}"
