@@ -40,6 +40,7 @@ from iacguard import github
 from iacguard.config import Config, ConfigError, find_config, load_config
 from iacguard.gitinfo import detect as detect_git, pull_request_base, ref_exists
 from iacguard.runners import DEFAULT_TOOLS, RUNNERS, ToolRun, _resolve, _version
+from iacguard.sarif import to_sarif
 from iacguard.schema import Finding, ScanReport, ToolName
 from iacguard.severity import SECRET_PREFIX
 from iacguard.scoring import SEVERITY_ORDER
@@ -80,6 +81,7 @@ VERSION_ARGS = {
 class OutputFormat(str, Enum):
     table = "table"
     json = "json"
+    sarif = "sarif"
 
 
 class FailOn(str, Enum):
@@ -359,10 +361,17 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
     console.print(_verdict(result, fail_on))
 
 
+def _sarif_json(result: ScanResult, path: Path) -> str:
+    ws = os.environ.get("GITHUB_WORKSPACE")
+    doc = to_sarif(_sorted(result.report.findings), path, result.ignored, Path(ws) if ws else None)
+    return json.dumps(doc, indent=2, ensure_ascii=False)
+
+
 def _write_output(result: ScanResult, fmt: OutputFormat, path: Path, fail_on: FailOn,
                   output: Path | None, details: bool = False) -> None:
-    if fmt is OutputFormat.json:
-        content = result.report.model_dump_json(indent=2)
+    if fmt in (OutputFormat.json, OutputFormat.sarif):
+        content = (result.report.model_dump_json(indent=2) if fmt is OutputFormat.json
+                   else _sarif_json(result, path))
         if output:
             output.write_text(content + "\n", encoding="utf-8")
         else:
@@ -449,6 +458,17 @@ def scan(
         typer.Option("--config", "-c", exists=True, dir_okay=False,
                      help="Fichier de configuration (défaut : .iacguard.yml du dossier scanné)."),
     ] = None,
+    sarif: Annotated[
+        Path | None,
+        typer.Option("--sarif", dir_okay=False, writable=True,
+                     help="Écrit AUSSI un rapport SARIF dans ce fichier (pour GitHub Code scanning)."),
+    ] = None,
+    annotations: Annotated[
+        bool,
+        typer.Option("--annotations/--no-annotations",
+                     help="GitHub Actions : annoter les lignes de la PR. Désactiver si le "
+                     "SARIF est envoyé à Code scanning (sinon chaque problème apparaît deux fois)."),
+    ] = True,
     since: Annotated[
         str | None,
         typer.Option("--since",
@@ -520,15 +540,22 @@ def scan(
                        style="yellow"))
 
     _write_output(result, fmt, path, fail_on, output, details)
-    _github_report(result, path, fail_on)
+    # JSON/SARIF sur stdout : rien d'autre ne doit s'y mélanger.
+    stdout_is_data = fmt is not OutputFormat.table and not output
+    _github_report(result, path, fail_on, annotations and not stdout_is_data)
     _save_last_scan(result, path)
 
     # Le verdict reste visible dans le terminal quand le rapport part ailleurs.
-    if fmt is OutputFormat.json or output:
+    if sarif:
+        sarif.write_text(_sarif_json(result, path) + "\n", encoding="utf-8")
+
+    if fmt is not OutputFormat.table or output:
         err.print(_counts_line(result))
         err.print(_verdict(result, fail_on))
     if output:
         err.print(Text(f"Rapport écrit dans {output}", style="dim"))
+    if sarif:
+        err.print(Text(f"Rapport SARIF écrit dans {sarif}", style="dim"))
 
     if failed:
         names = " et ".join(TOOL_LABEL[r.tool] for r in failed)
@@ -544,17 +571,18 @@ def scan(
     raise typer.Exit(EXIT_OK)
 
 
-def _github_report(result: ScanResult, path: Path, fail_on: FailOn) -> None:
+def _github_report(result: ScanResult, path: Path, fail_on: FailOn,
+                   annotations: bool = True) -> None:
     """Dans GitHub Actions : annotations sur les lignes de la PR + résumé du job."""
     if not github.in_github_actions():
         return
     # Les risques acceptés (.iacguard.yml) ne s'affichent pas dans la PR.
     findings = [f for f in _sorted(result.report.findings) if f.fingerprint not in result.ignored]
     threshold = None if fail_on is FailOn.none else fail_on.value
-    # Les annotations doivent sortir sur stdout pour que GitHub les lise. En
-    # JSON sur stdout, on les envoie quand même : le runner les retire du log.
-    for line in github.annotations(findings, path, threshold):
-        sys.stdout.write(line + "\n")
+    # Les annotations doivent sortir sur stdout pour que GitHub les lise.
+    if annotations:
+        for line in github.annotations(findings, path, threshold):
+            sys.stdout.write(line + "\n")
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
         d = result.decision

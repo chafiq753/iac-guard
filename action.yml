@@ -33,6 +33,15 @@ inputs:
   report:
     description: "Fichier où écrire le rapport JSON."
     default: "iacguard-report.json"
+  upload-sarif:
+    description: >-
+      Envoyer le rapport SARIF à GitHub Code scanning (onglet Security, alertes
+      dans la PR, sans limite de nombre). Le workflow doit avoir
+      `permissions: security-events: write`. Gratuit pour un dépôt public.
+    default: "false"
+  sarif:
+    description: "Fichier où écrire le rapport SARIF."
+    default: "iacguard.sarif"
   gitleaks-version:
     description: "Version de Gitleaks à installer."
     default: "8.21.2"
@@ -53,6 +62,9 @@ outputs:
   report:
     description: "Chemin du rapport JSON."
     value: ${{ inputs.report }}
+  sarif:
+    description: "Chemin du rapport SARIF."
+    value: ${{ inputs.sarif }}
 
 runs:
   using: "composite"
@@ -94,10 +106,27 @@ runs:
         IN_TOOLS: ${{ inputs.tools }}
         IN_STRICT: ${{ inputs.strict }}
         IN_REPORT: ${{ inputs.report }}
+        IN_SARIF: ${{ inputs.sarif }}
+        IN_UPLOAD: ${{ inputs.upload-sarif }}
       # Les entrées passent par des variables d'environnement, jamais
       # directement dans le script : pas d'injection de commande possible.
       run: |
         set -uo pipefail
-        args=(scan "$IN_PATH" --fail-on "$IN_FAIL_ON" --tools "$IN_TOOLS" -f json -o "$IN_REPORT")
+        args=(scan "$IN_PATH" --fail-on "$IN_FAIL_ON" --tools "$IN_TOOLS"
+              -f json -o "$IN_REPORT" --sarif "$IN_SARIF")
         if [ "$IN_STRICT" = "true" ]; then args+=(--strict); fi
+        # Avec Code scanning, les alertes s'affichent déjà dans la PR :
+        # pas d'annotations en double.
+        if [ "$IN_UPLOAD" = "true" ]; then args+=(--no-annotations); fi
         iacguard "${args[@]}"
+
+    # S'exécute même si le scan a bloqué (c'est justement là qu'on veut voir
+    # les alertes). Un échec d'envoi (permission manquante, dépôt privé sans
+    # GitHub Advanced Security) ne masque pas le verdict du scan.
+    - name: Envoyer le SARIF à GitHub Code scanning
+      if: ${{ always() && inputs.upload-sarif == 'true' }}
+      continue-on-error: true
+      uses: github/codeql-action/upload-sarif@v4
+      with:
+        sarif_file: ${{ inputs.sarif }}
+        category: iac-guard
