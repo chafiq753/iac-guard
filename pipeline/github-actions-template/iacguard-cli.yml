@@ -1,0 +1,67 @@
+# =============================================================================
+#  iac-guard — scan de sécurité avec l'outil en ligne de commande
+#
+#  Aucun serveur, aucun token : copier ce fichier dans
+#  .github/workflows/iacguard.yml du dépôt à protéger.
+#
+#  Ce que ça donne dans une pull request :
+#   - chaque problème est annoté sur sa ligne, onglet « Files changed » ;
+#   - un résumé (score, tableau cliquable) sur la page du run ;
+#   - le job échoue (code 1) si un finding atteint FAIL_ON.
+#
+#  Pour griser le bouton « Merge » quand le job échoue :
+#   Settings > Branches > Add branch ruleset (ou « Add rule ») sur `main`
+#   > cocher « Require status checks to pass » > ajouter le check
+#   « iac-guard ».
+#
+#  (Provisoire : à l'étape 6, ces lignes seront remplacées par
+#   `uses: chafiq753/iac-guard@v1`.)
+# =============================================================================
+
+name: iac-guard
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  FAIL_ON: high               # critical | high | medium | low | info | none
+  GITLEAKS_VERSION: "8.21.2"
+
+jobs:
+  iac-guard:                  # <- nom du check à rendre obligatoire
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0      # historique complet : Gitleaks lit aussi les anciens commits
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Installer iac-guard et les scanners
+        run: |
+          pip install --quiet "iacguard @ git+https://github.com/chafiq753/iac-guard@tool" checkov semgrep
+          curl -sSL "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          iacguard doctor
+
+      - name: Scan
+        id: scan
+        # --strict : un scanner qui ne tourne pas fait échouer le job
+        # (sinon il passerait au vert sans avoir rien vérifié).
+        run: iacguard scan . --fail-on "$FAIL_ON" --strict -o iacguard-report.json -f json
+
+      - name: Garder le rapport
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: iacguard-report
+          path: iacguard-report.json

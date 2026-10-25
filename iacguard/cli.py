@@ -21,6 +21,7 @@ que `-f json` donne sur stdout un JSON propre qu'on peut rediriger.
 
 from __future__ import annotations
 
+import os
 import sys
 from enum import Enum
 from pathlib import Path
@@ -28,14 +29,17 @@ from typing import Annotated
 
 import typer
 from rich.console import Console
+from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 
 from iacguard import __version__
 from iacguard.core import ScanResult, scan as run_scan
+from iacguard import github
 from iacguard.gitinfo import detect as detect_git
 from iacguard.runners import DEFAULT_TOOLS, RUNNERS, ToolRun, _resolve, _version
 from iacguard.schema import Finding, ToolName
+from iacguard.severity import SECRET_PREFIX
 from iacguard.scoring import SEVERITY_ORDER
 
 EXIT_OK = 0
@@ -128,13 +132,111 @@ def _plural(n: int, word: str) -> str:
     return f"{n} {word}{'s' if n > 1 else ''}"
 
 
-def _location(f: Finding) -> str:
+def _abs_file(f: Finding, root: Path) -> Path | None:
     if not f.file:
-        return f.resource or "-"
-    loc = f.file.lstrip("/")   # Checkov écrit /main.tf : affichage seulement
+        return None
+    return (root / f.file.lstrip("/")).resolve()   # Checkov écrit /main.tf
+
+
+def _display_path(p: Path) -> str:
+    """Chemin relatif au dossier courant : VS Code le rend cliquable
+    (Ctrl+clic ouvre le fichier à la bonne ligne)."""
+    try:
+        return p.relative_to(Path.cwd()).as_posix()
+    except ValueError:
+        return str(p)
+
+
+def _commit(f: Finding) -> str | None:
+    """Secret trouvé dans l'historique Git : le commit où il apparaît."""
+    if f.source is ToolName.GITLEAKS:
+        commit = f.raw.get("Commit")
+        return str(commit)[:7] if commit else None
+    return None
+
+
+def _location(f: Finding, root: Path) -> Text:
+    absolute = _abs_file(f, root)
+    if absolute is None:
+        return Text(f.resource or "-")
+    loc = _display_path(absolute)
     if f.line_start:
         loc += f":{f.line_start}"
-    return loc
+    # Lien OSC 8 : cliquable dans Windows Terminal et VS Code.
+    text = Text(loc, style=Style(link=absolute.as_uri(), underline=True))
+    extra = []
+    if f.line_end and f.line_start and f.line_end > f.line_start:
+        extra.append(f"lignes {f.line_start}-{f.line_end}")
+    if f.resource:
+        extra.append(f.resource)
+    if commit := _commit(f):
+        extra.append(f"commit {commit}")
+    if extra:
+        text.append("\n" + " · ".join(extra), style="dim")
+    return text
+
+
+# Règles Checkov qui portent sur un secret en dur : leur bloc de code
+# contient le secret, on ne l'affiche pas.
+_SECRET_RULES = {"CKV_AWS_41", "CKV_AWS_45", "CKV_AWS_46", "CKV_AZURE_41", "CKV_GCP_1"}
+
+
+def _is_secret(f: Finding) -> bool:
+    return (f.source is ToolName.GITLEAKS or f.rule_id in _SECRET_RULES
+            or f.rule_id.startswith(SECRET_PREFIX))
+
+
+def _secret_lines(findings: list[Finding], root: Path) -> set[tuple[Path, int]]:
+    """(fichier, ligne) où Gitleaks a trouvé un secret : masquées partout."""
+    out: set[tuple[Path, int]] = set()
+    for f in findings:
+        if f.source is ToolName.GITLEAKS and f.line_start and (a := _abs_file(f, root)):
+            for n in range(f.line_start, (f.line_end or f.line_start) + 1):
+                out.add((a, n))
+    return out
+
+
+def _snippet(f: Finding, root: Path, context: int = 0, max_lines: int = 8) -> list[tuple[int, str]]:
+    """Lignes de code concernées. Jamais pour un secret : on afficherait le secret."""
+    if _is_secret(f) or not f.line_start:
+        return []
+    absolute = _abs_file(f, root)
+    if absolute is None or not absolute.is_file():
+        return []
+    try:
+        lines = absolute.read_text(encoding="utf-8", errors="replace").splitlines()
+    except OSError:
+        return []
+    start = max(1, f.line_start - context)
+    end = min(len(lines), (f.line_end or f.line_start) + context, start + max_lines - 1)
+    return [(n, lines[n - 1]) for n in range(start, end + 1)]
+
+
+def _render_details(console: Console, findings: list[Finding], root: Path) -> None:
+    console.print(Text("Détails", style="bold"))
+    hidden = _secret_lines(findings, root)
+    for i, f in enumerate(findings, 1):
+        console.print()
+        console.print(Text.assemble(
+            (f"{i}. ", "bold"),
+            (f" {f.severity.value.upper()} ", SEVERITY_STYLE[f.severity.value]),
+            f"  {f.title}",
+        ))
+        loc = _location(f, root)
+        first, *rest = loc.split("\n")
+        console.print(Text.assemble("   Où      : ", first))
+        for extra in rest:
+            console.print(Text.assemble("             ", extra))
+        console.print(f"   Règle   : {f.rule_id} ({f.source.value})", highlight=False)
+        if f.remediation:
+            console.print(f"   Corriger: {f.remediation}", highlight=False)
+        if _is_secret(f):
+            console.print(Text("   Code    : masqué (contient un secret)", style="dim"))
+            continue
+        absolute = _abs_file(f, root)
+        for n, line in _snippet(f, root):
+            shown = "*** masqué (secret) ***" if (absolute, n) in hidden else line.rstrip()
+            console.print(Text(f"   {n:>5} | {shown}", style="dim"))
 
 
 def _sorted(findings: list[Finding]) -> list[Finding]:
@@ -195,7 +297,8 @@ def _verdict(result: ScanResult, fail_on: FailOn) -> Text:
     return text
 
 
-def _render_table(console: Console, result: ScanResult, path: Path, fail_on: FailOn) -> None:
+def _render_table(console: Console, result: ScanResult, path: Path, fail_on: FailOn,
+                  details: bool = False) -> None:
     meta = result.report.scan
     console.print(Text(f"iac-guard {__version__}  -  scan de {path}", style="bold"))
     ctx = [f"Dépôt : {meta.repo}"]
@@ -219,10 +322,13 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
                 Text(f.severity.value.upper(), style=SEVERITY_STYLE[f.severity.value]),
                 f.source.value,
                 f.rule_id,
-                _location(f),
+                _location(f, path),
                 f.title,
             )
         console.print(table)
+        if details:
+            console.print()
+            _render_details(console, findings, path)
     else:
         console.print(Text("Aucun problème détecté.", style="green"))
     console.print()
@@ -231,7 +337,7 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
 
 
 def _write_output(result: ScanResult, fmt: OutputFormat, path: Path, fail_on: FailOn,
-                  output: Path | None) -> None:
+                  output: Path | None, details: bool = False) -> None:
     if fmt is OutputFormat.json:
         content = result.report.model_dump_json(indent=2)
         if output:
@@ -242,9 +348,9 @@ def _write_output(result: ScanResult, fmt: OutputFormat, path: Path, fail_on: Fa
 
     if output:
         with output.open("w", encoding="utf-8") as fh:
-            _render_table(Console(file=fh, width=160, no_color=True, emoji=False), result, path, fail_on)
+            _render_table(Console(file=fh, width=160, no_color=True, emoji=False), result, path, fail_on, details)
     else:
-        _render_table(Console(emoji=False, highlight=False), result, path, fail_on)
+        _render_table(Console(emoji=False, highlight=False), result, path, fail_on, details)
 
 
 # --------------------------------------------------------------------------- #
@@ -302,6 +408,12 @@ def scan(
                      help="Échoue (code 2) si un scanner n'a pas pu tourner. "
                      "Recommandé en CI : sinon un scanner absent passe inaperçu."),
     ] = False,
+    details: Annotated[
+        bool,
+        typer.Option("--details", "-d",
+                     help="Après le tableau : pour chaque problème, la ressource, "
+                     "la correction et les lignes de code concernées."),
+    ] = False,
     semgrep_config: Annotated[
         str,
         typer.Option("--semgrep-config",
@@ -341,7 +453,8 @@ def scan(
                        "Lance `iacguard doctor` pour voir ce qui manque.", style="bold red"))
         raise typer.Exit(EXIT_ERROR)
 
-    _write_output(result, fmt, path, fail_on, output)
+    _write_output(result, fmt, path, fail_on, output, details)
+    _github_report(result, path, fail_on)
 
     # Le verdict reste visible dans le terminal quand le rapport part ailleurs.
     if fmt is OutputFormat.json or output:
@@ -362,6 +475,33 @@ def scan(
     if failed and strict:
         raise typer.Exit(EXIT_ERROR)
     raise typer.Exit(EXIT_OK)
+
+
+def _github_report(result: ScanResult, path: Path, fail_on: FailOn) -> None:
+    """Dans GitHub Actions : annotations sur les lignes de la PR + résumé du job."""
+    if not github.in_github_actions():
+        return
+    findings = _sorted(result.report.findings)
+    threshold = None if fail_on is FailOn.none else fail_on.value
+    # Les annotations doivent sortir sur stdout pour que GitHub les lise. En
+    # JSON sur stdout, on les envoie quand même : le runner les retire du log.
+    for line in github.annotations(findings, path, threshold):
+        sys.stdout.write(line + "\n")
+    summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
+    if summary_file:
+        d = result.decision
+        verdict = ("BLOQUÉ" if d.blocked else
+                   "rapport seulement" if threshold is None else "passé")
+        with open(summary_file, "a", encoding="utf-8") as fh:
+            fh.write(github.step_summary(findings, path, d.score.score, d.score.grade, verdict))
+    # Pour les étapes suivantes du workflow (et la future GitHub Action).
+    output_file = os.environ.get("GITHUB_OUTPUT")
+    if output_file:
+        with open(output_file, "a", encoding="utf-8") as fh:
+            fh.write(f"score={result.decision.score.score}\n")
+            fh.write(f"grade={result.decision.score.grade}\n")
+            fh.write(f"blocked={'true' if result.decision.blocked else 'false'}\n")
+            fh.write(f"findings={result.report.summary.total}\n")
 
 
 @app.command()

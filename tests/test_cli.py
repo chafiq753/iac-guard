@@ -288,3 +288,68 @@ def test_cli_blocks_demo_terraform(tmp_path: Path) -> None:
     # Chemins relatifs au dossier scanné, comme dans l'ancien pipeline CI.
     assert {f.file for f in report.findings} == {"/main.tf"}
     assert report.summary.by_severity[Severity.CRITICAL] >= 1
+
+
+# --------------------------------------------------------------------------- #
+# GitHub Actions : annotations, résumé, outputs
+# --------------------------------------------------------------------------- #
+
+
+def test_github_annotations_and_summary(fake_tools, tmp_path: Path, monkeypatch) -> None:
+    fake_tools(checkov=[
+        Finding(source=ToolName.CHECKOV, category=Category.MISCONFIGURATION, rule_id="CKV_AWS_20",
+                title="Bucket public, risque: fuite", severity=Severity.HIGH,
+                resource="aws_s3_bucket.data", file="/infra/main.tf", line_start=28, line_end=31),
+        _finding(ToolName.CHECKOV, Severity.LOW, rule="CKV_AWS_21"),
+    ])
+    summary, outputs = tmp_path / "summary.md", tmp_path / "out.txt"
+    for k, v in {"GITHUB_ACTIONS": "true", "GITHUB_WORKSPACE": str(tmp_path),
+                 "GITHUB_REPOSITORY": "o/r", "GITHUB_SHA": "abc",
+                 "GITHUB_STEP_SUMMARY": str(summary), "GITHUB_OUTPUT": str(outputs)}.items():
+        monkeypatch.setenv(k, v)
+
+    result = runner.invoke(app, ["scan", str(tmp_path)])
+    assert result.exit_code == EXIT_BLOCKED, result.output
+    lines = [l for l in result.stdout.splitlines() if l.startswith("::")]
+    # le high bloque -> error, sur la bonne ligne, chemin relatif au dépôt
+    assert lines[0].startswith("::error file=infra/main.tf,")
+    assert "line=28,endLine=31" in lines[0]
+    assert "risque%3A" not in lines[0].split("::")[2]     # ':' échappé seulement dans les propriétés
+    assert lines[1].startswith("::notice ")                # low -> simple note
+    md = summary.read_text(encoding="utf-8")
+    assert "BLOQUÉ" in md and "](https://github.com/o/r/blob/abc/infra/main.tf#L28-L31)" in md
+    assert "blocked=true" in outputs.read_text(encoding="utf-8")
+
+
+def test_no_annotations_outside_github(fake_tools, tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("GITHUB_ACTIONS", raising=False)
+    fake_tools(checkov=[_finding(ToolName.CHECKOV, Severity.HIGH)])
+    result = runner.invoke(app, ["scan", str(tmp_path)])
+    assert "::error" not in result.stdout
+
+
+# --------------------------------------------------------------------------- #
+# --details : code affiché, secrets jamais
+# --------------------------------------------------------------------------- #
+
+
+def test_details_shows_code_but_never_secrets(fake_tools, tmp_path: Path) -> None:
+    (tmp_path / "main.tf").write_text(
+        'resource "aws_s3_bucket" "b" {\n  acl = "public-read"\n}\n'
+        'provider "aws" {\n  access_key = "AKIA_FAUX_POUR_TEST"\n}\n',
+        encoding="utf-8",
+    )
+    fake_tools(
+        checkov=[
+            Finding(source=ToolName.CHECKOV, category=Category.MISCONFIGURATION, rule_id="CKV_AWS_20",
+                    title="Bucket public", severity=Severity.HIGH, file="/main.tf", line_start=1, line_end=3),
+            Finding(source=ToolName.CHECKOV, category=Category.MISCONFIGURATION, rule_id="CKV_AWS_41",
+                    title="Clé en dur", severity=Severity.HIGH, file="/main.tf", line_start=4, line_end=6),
+        ],
+        gitleaks=[Finding(source=ToolName.GITLEAKS, category=Category.SECRET, rule_id="aws-access-token",
+                          title="Clé AWS", severity=Severity.CRITICAL, file="main.tf", line_start=5)],
+    )
+    result = runner.invoke(app, ["scan", str(tmp_path), "--details"])
+    assert 'acl = "public-read"' in result.stdout
+    assert "AKIA_FAUX_POUR_TEST" not in result.stdout
+    assert "masqué" in result.stdout
