@@ -124,10 +124,20 @@ def _missing(tool: ToolName, binary: str) -> ToolRun:
 # --------------------------------------------------------------------------- #
 
 
-def run_gitleaks(path: Path, *, binary: str = "gitleaks", timeout: int = DEFAULT_TIMEOUT) -> ToolRun:
+def run_gitleaks(
+    path: Path,
+    *,
+    binary: str = "gitleaks",
+    timeout: int = DEFAULT_TIMEOUT,
+    since: str | None = None,
+) -> ToolRun:
     """Secrets. Si `path` est un dépôt Git, tout l'historique est scanné
     (un secret supprimé du code reste dans les anciens commits) ; sinon on
     scanne seulement les fichiers présents (--no-git).
+
+    `since` (ex. "origin/main") : seulement les commits après cette référence.
+    C'est le mode pull request : un vieux secret déjà dans main ne doit pas
+    bloquer toutes les PR suivantes (il est signalé par le scan de main).
     """
     exe = _resolve(binary)
     if not exe:
@@ -146,6 +156,8 @@ def run_gitleaks(path: Path, *, binary: str = "gitleaks", timeout: int = DEFAULT
         ]
         if not (path / ".git").exists():
             cmd.append("--no-git")
+        elif since:
+            cmd.append(f"--log-opts={since}..HEAD")
         try:
             proc = _run(cmd, timeout, cwd=path)
         except subprocess.TimeoutExpired:

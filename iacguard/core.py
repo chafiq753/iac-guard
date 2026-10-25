@@ -12,10 +12,11 @@ from __future__ import annotations
 
 import json
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
+from iacguard.config import IgnoreEntry, path_matches
 from iacguard.parsers import PARSERS
 from iacguard.runners import DEFAULT_TOOLS, RUNNERS, ToolRun
 from iacguard.schema import Finding, ScanMeta, ScanReport, ToolInfo, ToolName
@@ -27,6 +28,10 @@ class ScanResult:
     report: ScanReport
     runs: list[ToolRun]
     decision: Decision
+    # fingerprint -> justification, pour les findings couverts par un ignore
+    ignored: dict[str, str] = field(default_factory=dict)
+    excluded_count: int = 0                     # findings dans un chemin exclu
+    expired_ignores: list[IgnoreEntry] = field(default_factory=list)
 
     @property
     def failed_tools(self) -> list[ToolRun]:
@@ -54,6 +59,9 @@ def scan(
     fail_on: str | None = None,
     ignored_rules: Iterable[str] = (),
     semgrep_config: str = "auto",
+    exclude: Iterable[str] = (),
+    ignores: Iterable[IgnoreEntry] = (),
+    gitleaks_since: str | None = None,
     on_start: Callable[[ToolName], None] | None = None,
     on_done: Callable[[ToolRun], None] | None = None,
 ) -> ScanResult:
@@ -75,6 +83,8 @@ def scan(
             on_start(tool)
         if tool is ToolName.SEMGREP:
             run = runner(path, config=semgrep_config)
+        elif tool is ToolName.GITLEAKS and gitleaks_since:
+            run = runner(path, since=gitleaks_since)
         else:
             run = runner(path)
         runs.append(run)
@@ -87,10 +97,27 @@ def scan(
         # le format de la CI (Linux), sinon le fingerprint change selon l'OS.
         if f.file and "\\" in f.file:
             f.file = f.file.replace("\\", "/")
+    # Chemins exclus (.iacguard.yml) : hors du rapport.
+    patterns = list(exclude)
+    kept = [f for f in findings if not any(path_matches(f.file, p) for p in patterns)]
+    excluded_count = len(findings) - len(kept)
+    findings = kept
+
+    # Risques acceptés : restent dans le rapport, ne comptent plus.
+    active = [i for i in ignores if not i.expired()]
+    expired = [i for i in ignores if i.expired()]
+    ignored: dict[str, str] = {}
+    for f in findings:
+        entry = next((i for i in active if i.matches(f)), None)
+        if entry:
+            ignored[f.fingerprint] = entry.reason
+
     tool_infos = [ToolInfo(name=run.tool, version=run.version) for run in runs if run.ok]
     report = ScanReport.build(_meta(repo or path.name, branch, commit, tool_infos), findings)
-    decision = evaluate(findings, fail_on=fail_on, ignored_rules=ignored_rules)
-    return ScanResult(report=report, runs=runs, decision=decision)
+    decision = evaluate(findings, fail_on=fail_on, ignored_rules=ignored_rules,
+                        ignored_fingerprints=ignored)
+    return ScanResult(report=report, runs=runs, decision=decision, ignored=ignored,
+                      excluded_count=excluded_count, expired_ignores=expired)
 
 
 def report_from_files(

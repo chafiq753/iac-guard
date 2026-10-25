@@ -83,3 +83,18 @@ def detect(path: Path, env: Mapping[str, str] | None = None) -> GitInfo:
         branch=None if branch == "HEAD" else branch,   # "HEAD" = commit détaché
         commit=_git(path, "rev-parse", "HEAD"),
     )
+
+
+def ref_exists(path: Path, ref: str) -> bool:
+    return _git(path, "rev-parse", "--verify", "--quiet", f"{ref}^{{commit}}") is not None
+
+
+def pull_request_base(env: Mapping[str, str] | None = None) -> str | None:
+    """Dans une pull request GitHub : la branche cible (ex. "origin/main").
+
+    Sert à limiter Gitleaks aux commits de la PR.
+    """
+    env = os.environ if env is None else env
+    if env.get("GITHUB_EVENT_NAME", "").startswith("pull_request") and env.get("GITHUB_BASE_REF"):
+        return f"origin/{env['GITHUB_BASE_REF']}"
+    return None

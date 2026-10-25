@@ -93,6 +93,7 @@ def evaluate(
     findings: list[Finding],
     fail_on: str | None = None,
     ignored_rules: Iterable[str] = (),
+    ignored_fingerprints: Iterable[str] = (),
 ) -> Decision:
     """Calcule le score et décide si le scan doit faire échouer le pipeline.
 
@@ -113,7 +114,9 @@ def evaluate(
         )
 
     ignored = set(ignored_rules)
-    counted = [f for f in findings if f.rule_id not in ignored]
+    ignored_fp = set(ignored_fingerprints)   # exceptions ciblées (.iacguard.yml)
+    counted = [f for f in findings
+               if f.rule_id not in ignored and f.fingerprint not in ignored_fp]
     counts = dict(Counter(f.severity.value for f in counted))
 
     score = compute_score(counts)

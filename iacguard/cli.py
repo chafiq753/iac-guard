@@ -37,7 +37,8 @@ from rich.text import Text
 from iacguard import __version__
 from iacguard.core import ScanResult, scan as run_scan
 from iacguard import github
-from iacguard.gitinfo import detect as detect_git
+from iacguard.config import Config, ConfigError, find_config, load_config
+from iacguard.gitinfo import detect as detect_git, pull_request_base, ref_exists
 from iacguard.runners import DEFAULT_TOOLS, RUNNERS, ToolRun, _resolve, _version
 from iacguard.schema import Finding, ScanReport, ToolName
 from iacguard.severity import SECRET_PREFIX
@@ -216,7 +217,7 @@ def _snippet(f: Finding, root: Path, context: int = 0, max_lines: int = 8) -> li
 
 
 def _render_finding(console: Console, n: int, f: Finding, root: Path,
-                    hidden: set[tuple[Path, int]]) -> None:
+                    hidden: set[tuple[Path, int]], ignored_reason: str | None = None) -> None:
     console.print(Text.assemble(
         (f"#{n} ", "bold"),
         (f" {f.severity.value.upper()} ", SEVERITY_STYLE[f.severity.value]),
@@ -226,6 +227,9 @@ def _render_finding(console: Console, n: int, f: Finding, root: Path,
     if extra := _location_extra(f):
         console.print(f"   Détail    : {extra}", highlight=False)
     console.print(f"   Règle     : {f.rule_id} ({f.source.value})", highlight=False)
+    if ignored_reason:
+        console.print(Text(f"   Ignoré    : {ignored_reason} (.iacguard.yml, ne compte pas)",
+                           style="yellow"))
     if f.remediation:
         console.print(f"   Corriger  : {f.remediation}", highlight=False)
     if _is_secret(f):
@@ -240,11 +244,12 @@ def _render_finding(console: Console, n: int, f: Finding, root: Path,
         console.print(Text(f"   {num:>6} | {shown}", style="dim"))
 
 
-def _render_details(console: Console, findings: list[Finding], root: Path) -> None:
+def _render_details(console: Console, findings: list[Finding], root: Path,
+                    ignored: dict[str, str]) -> None:
     hidden = _secret_lines(findings, root)
     for n, f in enumerate(findings, 1):
         console.print()
-        _render_finding(console, n, f, root, hidden)
+        _render_finding(console, n, f, root, hidden, ignored.get(f.fingerprint))
 
 
 def _sorted(findings: list[Finding]) -> list[Finding]:
@@ -286,6 +291,8 @@ def _counts_line(result: ScanResult) -> Text:
     text.append(")")
     if result.decision.ignored_count:
         text.append(f"  dont {result.decision.ignored_count} ignoré(s)", style="dim")
+    if result.excluded_count:
+        text.append(f"  + {result.excluded_count} dans des chemins exclus", style="dim")
     return text
 
 
@@ -328,17 +335,20 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
         table.add_column("Emplacement", overflow="fold")
         table.add_column("Problème")
         for n, f in enumerate(findings, 1):
+            is_ignored = f.fingerprint in result.ignored
             table.add_row(
                 str(n),
-                Text(f.severity.value.upper(), style=SEVERITY_STYLE[f.severity.value]),
+                Text(f.severity.value.upper(),
+                     style="dim strike" if is_ignored else SEVERITY_STYLE[f.severity.value]),
                 f.source.value,
-                f.rule_id,
+                f.rule_id + (" (ignoré)" if is_ignored else ""),
                 _location(f, path),
                 f.title,
+                style="dim" if is_ignored else None,
             )
         console.print(table)
         if details:
-            _render_details(console, findings, path)
+            _render_details(console, findings, path, result.ignored)
         else:
             console.print(Text("Détails d'un problème : iacguard show <#>   (ex : iacguard show 1)",
                                style="dim"))
@@ -396,11 +406,12 @@ def scan(
                        dir_okay=True, resolve_path=True),
     ] = Path("."),
     fail_on: Annotated[
-        FailOn,
+        FailOn | None,
         typer.Option("--fail-on", case_sensitive=False,
                      help="Gravité à partir de laquelle le scan échoue (code 1). "
-                     "'high' bloque sur high ET critical. 'none' : ne bloque jamais."),
-    ] = FailOn.high,
+                     "'high' bloque sur high ET critical. 'none' : ne bloque jamais. "
+                     "Défaut : celui de .iacguard.yml, sinon high."),
+    ] = None,
     fmt: Annotated[
         OutputFormat,
         typer.Option("--format", "-f", case_sensitive=False, help="Format du rapport."),
@@ -411,10 +422,11 @@ def scan(
                      help="Écrit le rapport dans ce fichier (UTF-8) au lieu du terminal."),
     ] = None,
     tools: Annotated[
-        str,
+        str | None,
         typer.Option("--tools", "-t",
-                     help="Scanners à lancer, séparés par des virgules."),
-    ] = ",".join(t.value for t in DEFAULT_TOOLS),
+                     help="Scanners à lancer, séparés par des virgules "
+                     "(défaut : gitleaks,checkov,semgrep)."),
+    ] = None,
     strict: Annotated[
         bool,
         typer.Option("--strict",
@@ -428,15 +440,48 @@ def scan(
                      "(pour un seul : iacguard show <#>)."),
     ] = False,
     semgrep_config: Annotated[
-        str,
+        str | None,
         typer.Option("--semgrep-config",
                      help="Règles Semgrep : 'auto' (registre en ligne) ou un fichier local."),
-    ] = "auto",
+    ] = None,
+    config: Annotated[
+        Path | None,
+        typer.Option("--config", "-c", exists=True, dir_okay=False,
+                     help="Fichier de configuration (défaut : .iacguard.yml du dossier scanné)."),
+    ] = None,
+    since: Annotated[
+        str | None,
+        typer.Option("--since",
+                     help="Gitleaks : seulement les commits après cette référence "
+                     "(ex : origin/main). Automatique dans une pull request GitHub."),
+    ] = None,
 ) -> None:
     """Scanne un dossier et affiche les problèmes trouvés, le score et le verdict."""
-    selected = _parse_tools(tools)
     err = Console(stderr=True, emoji=False, highlight=False)
+
+    # Configuration : option de la ligne de commande > .iacguard.yml > défaut.
+    cfg_file = config or find_config(path)
+    try:
+        cfg = load_config(cfg_file) if cfg_file else Config()
+    except ConfigError as exc:
+        err.print(Text(str(exc), style="bold red"))
+        raise typer.Exit(EXIT_ERROR)
+    if cfg_file:
+        err.print(Text(f"Configuration : {_display_path(cfg_file.resolve())}", style="dim"))
+    if fail_on is None:
+        fail_on = FailOn(cfg.fail_on) if cfg.fail_on else FailOn.high
+    if tools is None:
+        tools = ",".join(cfg.tools) if cfg.tools else ",".join(t.value for t in DEFAULT_TOOLS)
+    semgrep_config = semgrep_config or cfg.semgrep_config or "auto"
+    selected = _parse_tools(tools)
     git = detect_git(path)
+
+    # Pull request : Gitleaks ne lit que les commits de la PR.
+    since = since or pull_request_base()
+    if since and not ref_exists(path, since):
+        err.print(Text(f"Référence {since} introuvable : Gitleaks scanne tout l'historique "
+                       "(dans le workflow, checkout avec fetch-depth: 0).", style="yellow"))
+        since = None
 
     def on_start(tool: ToolName) -> None:
         if err.is_terminal:
@@ -455,6 +500,9 @@ def scan(
             commit=git.commit,
             fail_on=None if fail_on is FailOn.none else fail_on.value,
             semgrep_config=semgrep_config,
+            exclude=cfg.exclude,
+            ignores=cfg.ignore,
+            gitleaks_since=since,
             on_start=on_start,
             on_done=on_done,
         )
@@ -465,6 +513,11 @@ def scan(
         err.print(Text("Aucun scanner n'a pu tourner : rien n'a été vérifié. "
                        "Lance `iacguard doctor` pour voir ce qui manque.", style="bold red"))
         raise typer.Exit(EXIT_ERROR)
+
+    for entry in result.expired_ignores:
+        err.print(Text(f"Exception expirée le {entry.expires} pour {entry.rule} : "
+                       "le problème compte de nouveau (à revoir dans .iacguard.yml).",
+                       style="yellow"))
 
     _write_output(result, fmt, path, fail_on, output, details)
     _github_report(result, path, fail_on)
@@ -495,7 +548,8 @@ def _github_report(result: ScanResult, path: Path, fail_on: FailOn) -> None:
     """Dans GitHub Actions : annotations sur les lignes de la PR + résumé du job."""
     if not github.in_github_actions():
         return
-    findings = _sorted(result.report.findings)
+    # Les risques acceptés (.iacguard.yml) ne s'affichent pas dans la PR.
+    findings = [f for f in _sorted(result.report.findings) if f.fingerprint not in result.ignored]
     threshold = None if fail_on is FailOn.none else fail_on.value
     # Les annotations doivent sortir sur stdout pour que GitHub les lise. En
     # JSON sur stdout, on les envoie quand même : le runner les retire du log.
@@ -529,7 +583,8 @@ def _save_last_scan(result: ScanResult, root: Path) -> None:
     try:
         cache = _cache_file()
         cache.parent.mkdir(parents=True, exist_ok=True)
-        payload = {"root": str(root), "report": result.report.model_dump(mode="json")}
+        payload = {"root": str(root), "report": result.report.model_dump(mode="json"),
+                   "ignored": result.ignored}
         cache.write_text(json.dumps(payload), encoding="utf-8")
     except OSError:
         pass   # pas de cache = `show` indisponible, le scan reste valide
@@ -554,7 +609,9 @@ def show(
         console.print(Text(f"Il n'y a que {len(findings)} problème(s) dans le dernier scan.",
                            style="bold red"))
         raise typer.Exit(EXIT_ERROR)
-    _render_finding(console, number, findings[number - 1], root, _secret_lines(findings, root))
+    f = findings[number - 1]
+    _render_finding(console, number, f, root, _secret_lines(findings, root),
+                    (data.get("ignored") or {}).get(f.fingerprint))
     raise typer.Exit(EXIT_OK)
 
 

@@ -1,0 +1,7 @@
+# Configuration iac-guard du dépôt iac-guard lui-même.
+fail_on: high
+exclude:
+  # Terraform de démo volontairement vulnérable (sert aux présentations)
+  - docs/demo-vulnerable-main.tf
+  # Exemples de sorties de scanners utilisés par les tests
+  - pipeline/aggregator/samples/
