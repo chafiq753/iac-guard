@@ -21,6 +21,7 @@ que `-f json` donne sur stdout un JSON propre qu'on peut rediriger.
 
 from __future__ import annotations
 
+import json
 import os
 import sys
 from enum import Enum
@@ -38,7 +39,7 @@ from iacguard.core import ScanResult, scan as run_scan
 from iacguard import github
 from iacguard.gitinfo import detect as detect_git
 from iacguard.runners import DEFAULT_TOOLS, RUNNERS, ToolRun, _resolve, _version
-from iacguard.schema import Finding, ToolName
+from iacguard.schema import Finding, ScanReport, ToolName
 from iacguard.severity import SECRET_PREFIX
 from iacguard.scoring import SEVERITY_ORDER
 
@@ -156,14 +157,18 @@ def _commit(f: Finding) -> str | None:
 
 
 def _location(f: Finding, root: Path) -> Text:
+    """`fichier:ligne`, comme avant. Le lien (OSC 8) ne change rien à
+    l'affichage ; dans VS Code / Windows Terminal, Ctrl+clic ouvre le fichier."""
     absolute = _abs_file(f, root)
     if absolute is None:
         return Text(f.resource or "-")
     loc = _display_path(absolute)
     if f.line_start:
         loc += f":{f.line_start}"
-    # Lien OSC 8 : cliquable dans Windows Terminal et VS Code.
-    text = Text(loc, style=Style(link=absolute.as_uri(), underline=True))
+    return Text(loc, style=Style(link=absolute.as_uri()))
+
+
+def _location_extra(f: Finding) -> str | None:
     extra = []
     if f.line_end and f.line_start and f.line_end > f.line_start:
         extra.append(f"lignes {f.line_start}-{f.line_end}")
@@ -171,9 +176,7 @@ def _location(f: Finding, root: Path) -> Text:
         extra.append(f.resource)
     if commit := _commit(f):
         extra.append(f"commit {commit}")
-    if extra:
-        text.append("\n" + " · ".join(extra), style="dim")
-    return text
+    return " · ".join(extra) or None
 
 
 # Règles Checkov qui portent sur un secret en dur : leur bloc de code
@@ -212,38 +215,44 @@ def _snippet(f: Finding, root: Path, context: int = 0, max_lines: int = 8) -> li
     return [(n, lines[n - 1]) for n in range(start, end + 1)]
 
 
+def _render_finding(console: Console, n: int, f: Finding, root: Path,
+                    hidden: set[tuple[Path, int]]) -> None:
+    console.print(Text.assemble(
+        (f"#{n} ", "bold"),
+        (f" {f.severity.value.upper()} ", SEVERITY_STYLE[f.severity.value]),
+        f"  {f.title}",
+    ))
+    console.print(Text.assemble("   Fichier   : ", _location(f, root)))
+    if extra := _location_extra(f):
+        console.print(f"   Détail    : {extra}", highlight=False)
+    console.print(f"   Règle     : {f.rule_id} ({f.source.value})", highlight=False)
+    if f.remediation:
+        console.print(f"   Corriger  : {f.remediation}", highlight=False)
+    if _is_secret(f):
+        console.print(Text("   Code      : masqué (contient un secret)", style="dim"))
+        return
+    absolute = _abs_file(f, root)
+    snippet = _snippet(f, root)
+    if snippet:
+        console.print("   Code      :")
+    for num, line in snippet:
+        shown = "*** masqué (secret) ***" if (absolute, num) in hidden else line.rstrip()
+        console.print(Text(f"   {num:>6} | {shown}", style="dim"))
+
+
 def _render_details(console: Console, findings: list[Finding], root: Path) -> None:
-    console.print(Text("Détails", style="bold"))
     hidden = _secret_lines(findings, root)
-    for i, f in enumerate(findings, 1):
+    for n, f in enumerate(findings, 1):
         console.print()
-        console.print(Text.assemble(
-            (f"{i}. ", "bold"),
-            (f" {f.severity.value.upper()} ", SEVERITY_STYLE[f.severity.value]),
-            f"  {f.title}",
-        ))
-        loc = _location(f, root)
-        first, *rest = loc.split("\n")
-        console.print(Text.assemble("   Où      : ", first))
-        for extra in rest:
-            console.print(Text.assemble("             ", extra))
-        console.print(f"   Règle   : {f.rule_id} ({f.source.value})", highlight=False)
-        if f.remediation:
-            console.print(f"   Corriger: {f.remediation}", highlight=False)
-        if _is_secret(f):
-            console.print(Text("   Code    : masqué (contient un secret)", style="dim"))
-            continue
-        absolute = _abs_file(f, root)
-        for n, line in _snippet(f, root):
-            shown = "*** masqué (secret) ***" if (absolute, n) in hidden else line.rstrip()
-            console.print(Text(f"   {n:>5} | {shown}", style="dim"))
+        _render_finding(console, n, f, root, hidden)
 
 
 def _sorted(findings: list[Finding]) -> list[Finding]:
     rank = {sev: i for i, sev in enumerate(reversed(SEVERITY_ORDER))}  # critical = 0
     return sorted(
         findings,
-        key=lambda f: (rank[f.severity.value], f.source.value, f.file or "", f.line_start or 0),
+        key=lambda f: (rank[f.severity.value], f.source.value, f.file or "", f.line_start or 0,
+                       f.rule_id),   # ordre stable : `show 5` = toujours la même ligne
     )
 
 
@@ -312,13 +321,15 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
     findings = _sorted(result.report.findings)
     if findings:
         table = Table(show_lines=False, header_style="bold", expand=False)
+        table.add_column("#", justify="right", style="dim", no_wrap=True)
         table.add_column("Gravité", no_wrap=True)
         table.add_column("Outil", no_wrap=True)
         table.add_column("Règle", overflow="fold")
         table.add_column("Emplacement", overflow="fold")
         table.add_column("Problème")
-        for f in findings:
+        for n, f in enumerate(findings, 1):
             table.add_row(
+                str(n),
                 Text(f.severity.value.upper(), style=SEVERITY_STYLE[f.severity.value]),
                 f.source.value,
                 f.rule_id,
@@ -327,8 +338,10 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
             )
         console.print(table)
         if details:
-            console.print()
             _render_details(console, findings, path)
+        else:
+            console.print(Text("Détails d'un problème : iacguard show <#>   (ex : iacguard show 1)",
+                               style="dim"))
     else:
         console.print(Text("Aucun problème détecté.", style="green"))
     console.print()
@@ -411,8 +424,8 @@ def scan(
     details: Annotated[
         bool,
         typer.Option("--details", "-d",
-                     help="Après le tableau : pour chaque problème, la ressource, "
-                     "la correction et les lignes de code concernées."),
+                     help="Après le tableau, les détails de TOUS les problèmes "
+                     "(pour un seul : iacguard show <#>)."),
     ] = False,
     semgrep_config: Annotated[
         str,
@@ -455,6 +468,7 @@ def scan(
 
     _write_output(result, fmt, path, fail_on, output, details)
     _github_report(result, path, fail_on)
+    _save_last_scan(result, path)
 
     # Le verdict reste visible dans le terminal quand le rapport part ailleurs.
     if fmt is OutputFormat.json or output:
@@ -502,6 +516,46 @@ def _github_report(result: ScanResult, path: Path, fail_on: FailOn) -> None:
             fh.write(f"grade={result.decision.score.grade}\n")
             fh.write(f"blocked={'true' if result.decision.blocked else 'false'}\n")
             fh.write(f"findings={result.report.summary.total}\n")
+
+
+def _cache_file() -> Path:
+    """Dernier scan, pour `iacguard show`. Hors du dépôt : rien à ignorer dans Git."""
+    base = os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_CACHE_HOME") \
+        or str(Path.home() / ".cache")
+    return Path(base) / "iacguard" / "last-scan.json"
+
+
+def _save_last_scan(result: ScanResult, root: Path) -> None:
+    try:
+        cache = _cache_file()
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"root": str(root), "report": result.report.model_dump(mode="json")}
+        cache.write_text(json.dumps(payload), encoding="utf-8")
+    except OSError:
+        pass   # pas de cache = `show` indisponible, le scan reste valide
+
+
+@app.command()
+def show(
+    number: Annotated[int, typer.Argument(help="Numéro du problème (colonne # du tableau).", min=1)],
+) -> None:
+    """Détails d'un problème du dernier scan : fichier, ligne, ressource, code, correction."""
+    console = Console(emoji=False, highlight=False)
+    try:
+        data = json.loads(_cache_file().read_text(encoding="utf-8"))
+        report = ScanReport.model_validate(data["report"])
+        root = Path(data["root"])
+    except (OSError, ValueError, KeyError):
+        console.print(Text("Aucun scan récent : lance d'abord `iacguard scan .`", style="bold red"))
+        raise typer.Exit(EXIT_ERROR)
+
+    findings = _sorted(report.findings)
+    if number > len(findings):
+        console.print(Text(f"Il n'y a que {len(findings)} problème(s) dans le dernier scan.",
+                           style="bold red"))
+        raise typer.Exit(EXIT_ERROR)
+    _render_finding(console, number, findings[number - 1], root, _secret_lines(findings, root))
+    raise typer.Exit(EXIT_OK)
 
 
 @app.command()

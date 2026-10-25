@@ -25,6 +25,12 @@ from iacguard.schema import Category, Finding, ScanReport, Severity, ToolName
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def isolated_cache(tmp_path_factory, monkeypatch):
+    """Le cache du dernier scan (pour `show`) va dans un dossier temporaire."""
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path_factory.mktemp("cache")))
+
+
 def _finding(tool: ToolName, severity: Severity, rule: str = "RULE_1", file: str = "main.tf") -> Finding:
     return Finding(
         source=tool,
@@ -353,3 +359,33 @@ def test_details_shows_code_but_never_secrets(fake_tools, tmp_path: Path) -> Non
     assert 'acl = "public-read"' in result.stdout
     assert "AKIA_FAUX_POUR_TEST" not in result.stdout
     assert "masqué" in result.stdout
+
+
+# --------------------------------------------------------------------------- #
+# Tableau numéroté + iacguard show
+# --------------------------------------------------------------------------- #
+
+
+def test_show_gives_details_of_numbered_row(fake_tools, tmp_path: Path) -> None:
+    (tmp_path / "main.tf").write_text('resource "aws_s3_bucket" "b" {\n  acl = "public-read"\n}\n',
+                                      encoding="utf-8")
+    fake_tools(checkov=[
+        _finding(ToolName.CHECKOV, Severity.LOW, rule="RULE_LOW"),
+        Finding(source=ToolName.CHECKOV, category=Category.MISCONFIGURATION, rule_id="CKV_AWS_20",
+                title="Bucket public", severity=Severity.HIGH, resource="aws_s3_bucket.b",
+                file="/main.tf", line_start=1, line_end=3),
+    ])
+    scan = runner.invoke(app, ["scan", str(tmp_path)])
+    assert "iacguard show" in scan.stdout
+    # #1 = le plus grave
+    result = runner.invoke(app, ["show", "1"])
+    assert result.exit_code == EXIT_OK, result.output
+    assert "CKV_AWS_20" in result.stdout and "aws_s3_bucket.b" in result.stdout
+    assert 'acl = "public-read"' in result.stdout
+    assert runner.invoke(app, ["show", "3"]).exit_code == EXIT_ERROR
+
+
+def test_show_without_previous_scan() -> None:
+    result = runner.invoke(app, ["show", "1"])
+    assert result.exit_code == EXIT_ERROR
+    assert "Aucun scan" in result.stdout
