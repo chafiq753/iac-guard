@@ -8,6 +8,12 @@ temporaire, le parser correspondant le transforme en `Finding`.
 Un scanner absent ou qui plante ne fait pas planter tout le scan : le
 runner renvoie un `ToolRun` avec status "missing" ou "error" et un message.
 C'est à l'appelant (la CLI) de décider si c'est bloquant.
+
+Chaque scanner est lancé DEPUIS le dossier scanné, sur la cible « . ». Les
+chemins des findings sont alors relatifs à la racine du dépôt (main.tf,
+/modules/s3/main.tf pour Checkov), exactement comme dans l'ancien pipeline
+GitHub Actions : les fingerprints restent les mêmes qu'avant, et un scan
+local donne le même résultat qu'un scan en CI (pas de /home/... ni C:\\...).
 """
 
 from __future__ import annotations
@@ -131,7 +137,7 @@ def run_gitleaks(path: Path, *, binary: str = "gitleaks", timeout: int = DEFAULT
         report = Path(tmp) / "gitleaks.json"
         cmd = [
             exe, "detect",
-            "--source", str(path),
+            "--source", ".",
             "--report-format", "json",
             "--report-path", str(report),
             "--redact",          # le secret n'apparaît jamais en clair dans le rapport
@@ -141,14 +147,14 @@ def run_gitleaks(path: Path, *, binary: str = "gitleaks", timeout: int = DEFAULT
         if not (path / ".git").exists():
             cmd.append("--no-git")
         try:
-            proc = _run(cmd, timeout)
+            proc = _run(cmd, timeout, cwd=path)
         except subprocess.TimeoutExpired:
             return ToolRun(ToolName.GITLEAKS, "error", message=f"Gitleaks a dépassé {timeout}s.")
 
         if proc.returncode != 0:
             return ToolRun(
                 ToolName.GITLEAKS, "error",
-                message=f"Gitleaks a échoué (code {proc.returncode}). {_tail(proc.stderr)}",
+                message=f"Gitleaks a échoué (code {proc.returncode}).\n{_tail(proc.stderr)}",
             )
         try:
             data = _load_json_file(report)
@@ -169,27 +175,27 @@ def run_checkov(path: Path, *, binary: str = "checkov", timeout: int = DEFAULT_T
         return _missing(ToolName.CHECKOV, binary)
 
     cmd = [
-        exe, "-d", str(path), "-o", "json", "--soft-fail",
+        exe, "-d", ".", "-o", "json", "--soft-fail",
         # Les secrets sont le travail de Gitleaks (qui lit aussi l'historique
         # Git). Les laisser à Checkov compterait deux fois le même secret.
         "--skip-framework", "secrets",
     ]
     try:
-        proc = _run(cmd, timeout)
+        proc = _run(cmd, timeout, cwd=path)
     except subprocess.TimeoutExpired:
         return ToolRun(ToolName.CHECKOV, "error", message=f"Checkov a dépassé {timeout}s.")
 
     if not proc.stdout.strip():
         return ToolRun(
             ToolName.CHECKOV, "error",
-            message=f"Checkov n'a rien renvoyé (code {proc.returncode}). {_tail(proc.stderr)}",
+            message=f"Checkov n'a rien renvoyé (code {proc.returncode}).\n{_tail(proc.stderr)}",
         )
     try:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return ToolRun(
             ToolName.CHECKOV, "error",
-            message=f"Sortie Checkov non JSON (code {proc.returncode}). {_tail(proc.stdout)}",
+            message=f"Sortie Checkov non JSON (code {proc.returncode}).\n{_tail(proc.stdout)}",
         )
 
     # Version : dans `summary` (rapport complet) ou à la racine (aucun fichier
@@ -218,6 +224,11 @@ def run_semgrep(
     if not exe:
         return _missing(ToolName.SEMGREP, binary)
 
+    # Le scan tourne depuis `path` : un fichier de règles donné en chemin
+    # relatif doit être résolu AVANT, depuis le dossier de l'utilisateur.
+    if config != "auto" and Path(config).exists():
+        config = str(Path(config).resolve())
+
     with tempfile.TemporaryDirectory(prefix="iacguard-") as tmp:
         report = Path(tmp) / "semgrep.json"
         cmd = [
@@ -231,10 +242,10 @@ def run_semgrep(
         # refuse `--config auto` sans métriques, donc on ne coupe que là.
         if config != "auto":
             cmd.append("--metrics=off")
-        cmd.append(str(path))
+        cmd.append(".")
         try:
             # Pas de vérification de nouvelle version à chaque scan.
-            proc = _run(cmd, timeout, env={"SEMGREP_ENABLE_VERSION_CHECK": "0"})
+            proc = _run(cmd, timeout, cwd=path, env={"SEMGREP_ENABLE_VERSION_CHECK": "0"})
         except subprocess.TimeoutExpired:
             return ToolRun(ToolName.SEMGREP, "error", message=f"Semgrep a dépassé {timeout}s.")
 
@@ -246,9 +257,13 @@ def run_semgrep(
     # Sans --error, Semgrep sort en 0 même s'il trouve des problèmes : un
     # code non nul veut dire qu'il n'a pas pu tourner (config, réseau...).
     if proc.returncode != 0 or data is None:
+        hint = ""
+        if config == "auto" and "semgrep.dev" in (proc.stderr or ""):
+            hint = (" --config auto télécharge les règles sur semgrep.dev : pas d'accès"
+                    " Internet ? Sinon passe un fichier de règles local avec --semgrep-config.")
         return ToolRun(
             ToolName.SEMGREP, "error",
-            message=f"Semgrep a échoué (code {proc.returncode}). {_tail(proc.stderr)}",
+            message=f"Semgrep a échoué (code {proc.returncode}).{hint}\n{_tail(proc.stderr)}",
         )
 
     return ToolRun(

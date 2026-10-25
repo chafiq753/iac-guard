@@ -11,7 +11,7 @@ les scanners : c'est le mode de l'ancien aggregator du pipeline.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -54,8 +54,14 @@ def scan(
     fail_on: str | None = None,
     ignored_rules: Iterable[str] = (),
     semgrep_config: str = "auto",
+    on_start: Callable[[ToolName], None] | None = None,
+    on_done: Callable[[ToolRun], None] | None = None,
 ) -> ScanResult:
-    """Lance les scanners demandés sur `path` et renvoie rapport + décision."""
+    """Lance les scanners demandés sur `path` et renvoie rapport + décision.
+
+    `on_start` / `on_done` : appelés avant et après chaque scanner, pour que
+    la CLI affiche la progression (le cœur, lui, n'affiche rien).
+    """
     path = Path(path).resolve()
     if not path.is_dir():
         raise NotADirectoryError(f"Dossier introuvable : {path}")
@@ -65,12 +71,22 @@ def scan(
         runner = RUNNERS.get(tool)
         if runner is None:
             raise ValueError(f"Aucun runner pour l'outil {tool.value!r}.")
+        if on_start:
+            on_start(tool)
         if tool is ToolName.SEMGREP:
-            runs.append(runner(path, config=semgrep_config))
+            run = runner(path, config=semgrep_config)
         else:
-            runs.append(runner(path))
+            run = runner(path)
+        runs.append(run)
+        if on_done:
+            on_done(run)
 
     findings: list[Finding] = [f for run in runs for f in run.findings]
+    for f in findings:
+        # Sous Windows certains scanners renvoient infra\\main.tf : on garde
+        # le format de la CI (Linux), sinon le fingerprint change selon l'OS.
+        if f.file and "\\" in f.file:
+            f.file = f.file.replace("\\", "/")
     tool_infos = [ToolInfo(name=run.tool, version=run.version) for run in runs if run.ok]
     report = ScanReport.build(_meta(repo or path.name, branch, commit, tool_infos), findings)
     decision = evaluate(findings, fail_on=fail_on, ignored_rules=ignored_rules)
