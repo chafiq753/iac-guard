@@ -58,3 +58,14 @@ def semgrep_sample() -> dict[str, Any]:
             },
         ],
     }
+
+
+@pytest.fixture(autouse=True)
+def clean_github_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Les tests tournent aussi DANS GitHub Actions (workflow Tests) : sans
+    ça, les variables GITHUB_* du vrai runner activeraient les annotations,
+    le mode pull request... Les tests qui en ont besoin les remettent."""
+    import os
+    for var in list(os.environ):
+        if var.startswith("GITHUB_"):
+            monkeypatch.delenv(var, raising=False)
