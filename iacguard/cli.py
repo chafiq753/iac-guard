@@ -351,9 +351,10 @@ def scan(
         err.print(Text(f"Rapport écrit dans {output}", style="dim"))
 
     if failed:
-        names = ", ".join(TOOL_LABEL[r.tool] for r in failed)
+        names = " et ".join(TOOL_LABEL[r.tool] for r in failed)
+        verb = "n'ont pas tourné" if len(failed) > 1 else "n'a pas tourné"
         hint = "" if strict else " Ajoute --strict pour faire échouer le scan dans ce cas."
-        err.print(Text(f"Attention : scan partiel, {names} n'a pas tourné.{hint}",
+        err.print(Text(f"Attention : scan partiel, {names} {verb}.{hint}",
                        style="bold yellow"))
 
     if result.decision.blocked:
