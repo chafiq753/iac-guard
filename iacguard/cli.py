@@ -24,6 +24,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+from importlib import resources
 from enum import Enum
 from pathlib import Path
 from typing import Annotated
@@ -640,6 +641,62 @@ def show(
     f = findings[number - 1]
     _render_finding(console, number, f, root, _secret_lines(findings, root),
                     (data.get("ignored") or {}).get(f.fingerprint))
+    raise typer.Exit(EXIT_OK)
+
+
+# Version de l'action GitHub écrite par `iacguard init --github`.
+ACTION_REF = "tool"   # deviendra "v1" à la publication
+
+
+def _default_branch(path: Path) -> str:
+    from iacguard.gitinfo import _git  # lecture seule
+    head = _git(path, "symbolic-ref", "--short", "refs/remotes/origin/HEAD")   # origin/main
+    if head and "/" in head:
+        return head.split("/", 1)[1]
+    return _git(path, "rev-parse", "--abbrev-ref", "HEAD") or "main"
+
+
+@app.command()
+def init(
+    path: Annotated[
+        Path,
+        typer.Argument(help="Racine du dépôt.", exists=True, file_okay=False, resolve_path=True),
+    ] = Path("."),
+    github: Annotated[
+        bool,
+        typer.Option("--github", help="Ajoute aussi le workflow GitHub Actions "
+                     "(scan à chaque pull request, alertes dans la PR)."),
+    ] = False,
+    force: Annotated[bool, typer.Option("--force", help="Remplace les fichiers existants.")] = False,
+) -> None:
+    """Prépare un dépôt : crée .iacguard.yml (et le workflow GitHub avec --github)."""
+    console = Console(emoji=False, highlight=False)
+    templates = resources.files("iacguard") / "templates"
+    files = {path / ".iacguard.yml": (templates / "iacguard.yml").read_text(encoding="utf-8")}
+    if github:
+        workflow = (templates / "github-workflow.yml").read_text(encoding="utf-8")
+        workflow = workflow.replace("__REF__", ACTION_REF).replace("__BRANCH__", _default_branch(path))
+        files[path / ".github" / "workflows" / "iacguard.yml"] = workflow
+
+    for target, content in files.items():
+        shown = _display_path(target)
+        if target.exists() and not force:
+            console.print(Text.assemble(("  EXISTE ", "yellow"), shown, ("  (--force pour remplacer)", "dim")))
+            continue
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        console.print(Text.assemble(("  CRÉÉ   ", "green"), shown))
+
+    console.print()
+    console.print(Text("Ensuite :", style="bold"))
+    console.print("  1. iacguard scan .            (scan local)")
+    if github:
+        console.print("  2. git add .iacguard.yml .github && git commit -m \"Ajout iac-guard\" && git push")
+        console.print("  3. Sur GitHub : Settings > Rules > Rulesets > New branch ruleset")
+        console.print("     > Require status checks to pass > ajouter « iac-guard »")
+        console.print("     (le check apparaît après le premier scan : bloque le merge si le scan échoue)")
+    else:
+        console.print("  Pour scanner à chaque pull request GitHub : iacguard init --github")
     raise typer.Exit(EXIT_OK)
 
 

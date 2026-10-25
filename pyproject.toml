@@ -28,6 +28,9 @@ version = { attr = "iacguard.__version__" }
 [tool.setuptools.packages.find]
 include = ["iacguard*"]
 
+[tool.setuptools.package-data]
+iacguard = ["templates/*.yml"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 markers = [

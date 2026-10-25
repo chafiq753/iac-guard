@@ -389,3 +389,27 @@ def test_show_without_previous_scan() -> None:
     result = runner.invoke(app, ["show", "1"])
     assert result.exit_code == EXIT_ERROR
     assert "Aucun scan" in result.stdout
+
+
+# --------------------------------------------------------------------------- #
+# iacguard init
+# --------------------------------------------------------------------------- #
+
+
+def test_init_creates_config_and_workflow(tmp_path: Path) -> None:
+    result = runner.invoke(app, ["init", str(tmp_path), "--github"])
+    assert result.exit_code == 0, result.output
+    from iacguard.config import load_config
+    load_config(tmp_path / ".iacguard.yml")                     # config générée valide
+    wf = (tmp_path / ".github" / "workflows" / "iacguard.yml").read_text(encoding="utf-8")
+    assert "chafiq753/iac-guard@" in wf and "__REF__" not in wf and "__BRANCH__" not in wf
+    import yaml
+    yaml.safe_load(wf)
+
+
+def test_init_does_not_overwrite(tmp_path: Path) -> None:
+    (tmp_path / ".iacguard.yml").write_text("fail_on: critical\n", encoding="utf-8")
+    runner.invoke(app, ["init", str(tmp_path)])
+    assert (tmp_path / ".iacguard.yml").read_text(encoding="utf-8") == "fail_on: critical\n"
+    runner.invoke(app, ["init", str(tmp_path), "--force"])
+    assert "fail_on: high" in (tmp_path / ".iacguard.yml").read_text(encoding="utf-8")

@@ -22,11 +22,13 @@ inputs:
     description: "Dossier à scanner, relatif à la racine du dépôt."
     default: "."
   fail-on:
-    description: "Gravité qui fait échouer le scan : critical, high, medium, low, info ou none."
-    default: "high"
+    description: >-
+      Gravité qui fait échouer le scan : critical, high, medium, low, info ou none.
+      Vide : celle de .iacguard.yml, sinon high.
+    default: ""
   tools:
-    description: "Scanners à lancer, séparés par des virgules."
-    default: "gitleaks,checkov,semgrep"
+    description: "Scanners à lancer, séparés par des virgules. Vide : .iacguard.yml, sinon les trois."
+    default: ""
   strict:
     description: "Échouer si un scanner n'a pas pu tourner (true/false)."
     default: "true"
@@ -112,8 +114,11 @@ runs:
       # directement dans le script : pas d'injection de commande possible.
       run: |
         set -uo pipefail
-        args=(scan "$IN_PATH" --fail-on "$IN_FAIL_ON" --tools "$IN_TOOLS"
-              -f json -o "$IN_REPORT" --sarif "$IN_SARIF")
+        args=(scan "$IN_PATH" -f json -o "$IN_REPORT" --sarif "$IN_SARIF")
+        # Entrée vide = laisser décider .iacguard.yml (sinon l'action
+        # écraserait toujours la config du dépôt).
+        if [ -n "$IN_FAIL_ON" ]; then args+=(--fail-on "$IN_FAIL_ON"); fi
+        if [ -n "$IN_TOOLS" ]; then args+=(--tools "$IN_TOOLS"); fi
         if [ "$IN_STRICT" = "true" ]; then args+=(--strict); fi
         # Avec Code scanning, les alertes s'affichent déjà dans la PR :
         # pas d'annotations en double.

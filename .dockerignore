@@ -1,0 +1,6 @@
+# Seul l'outil entre dans l'image (pas le dashboard, ni node_modules, ni .git)
+*
+!pyproject.toml
+!README.md
+!iacguard/
+**/__pycache__
