@@ -43,7 +43,7 @@ RUN case "${TARGETARCH}" in \
 # Scanners d'abord (couche lourde, rarement modifiée), l'outil ensuite.
 RUN pip install checkov semgrep
 
-COPY pyproject.toml README.md /build/
+COPY pyproject.toml README.md LICENSE /build/
 COPY iacguard /build/iacguard
 RUN pip install /build && rm -rf /build
 
