@@ -1,5 +1,5 @@
-name: "iac-guard"
-description: "Scan de sécurité IaC : secrets (Gitleaks), mauvaises configurations (Checkov) et code (Semgrep), avec score et blocage de PR."
+name: "iac-guard Security Scan"
+description: "Scan IaC repos with Gitleaks, Checkov and Semgrep: one report, a 0-100 score and a verdict that blocks risky PRs."
 author: "Chafiq Boulghallat"
 branding:
   icon: "shield"
