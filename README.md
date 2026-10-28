@@ -8,8 +8,9 @@ iac-guard runs **Gitleaks**, **Checkov** and **Semgrep** on your repository and 
 
 [![Tests](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml)
 [![Docker image](https://github.com/chafiq753/iac-guard/actions/workflows/docker.yml/badge.svg?branch=main)](https://github.com/chafiq753/iac-guard/pkgs/container/iacguard)
+[![PyPI](https://img.shields.io/pypi/v/iacguard-cli)](https://pypi.org/project/iacguard-cli/)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-[![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green)](https://github.com/chafiq753/iac-guard/blob/main/LICENSE)
 
 [Quick start](#quick-start) ·
 [CLI](#command-line) ·
@@ -73,15 +74,14 @@ docker run --rm -v "$PWD:/src" ghcr.io/chafiq753/iacguard scan /src -f json -o /
 ### pip
 
 ```bash
-pip install iacguard
-pip install checkov semgrep        # IaC and code scanners
+pip install "iacguard-cli[scanners]"   # iac-guard + Checkov + Semgrep
 # Gitleaks is a single binary: https://github.com/gitleaks/gitleaks/releases
 
 iacguard doctor                    # checks which scanners are available
 iacguard scan .
 ```
 
-Requires Python 3.10+. Any scanner that is missing is reported, and the scan continues with the others. Use `--strict` to fail instead.
+Requires Python 3.10+. The package is named `iacguard-cli` on PyPI; the command is `iacguard`. Use `pip install iacguard-cli` alone if the scanners are already installed. Any scanner that is missing is reported, and the scan continues with the others. Use `--strict` to fail instead.
 
 ### Set up a repository
 
@@ -298,7 +298,7 @@ This repository also contains a self-hosted web dashboard (`backend/`: FastAPI +
 
 The dashboard is **not required**. The CLI and the GitHub Action are fully standalone, and the dashboard only consumes the JSON reports they produce.
 
-Dashboard documentation (in French): [docs/DASHBOARD.md](docs/DASHBOARD.md). The last version before the standalone CLI is kept on the [`dashboard`](https://github.com/chafiq753/iac-guard/tree/dashboard) branch.
+Dashboard documentation (in French): [docs/DASHBOARD.md](https://github.com/chafiq753/iac-guard/blob/main/docs/DASHBOARD.md). The last version before the standalone CLI is kept on the [`dashboard`](https://github.com/chafiq753/iac-guard/tree/dashboard) branch.
 
 ## Development
 
@@ -315,11 +315,11 @@ Contributions are welcome: open an issue to discuss a change before submitting a
 
 ## Security
 
-Please do not report security issues in public issues. See [SECURITY.md](SECURITY.md).
+Please do not report security issues in public issues. See [SECURITY.md](https://github.com/chafiq753/iac-guard/blob/main/SECURITY.md).
 
 ## License
 
-[Apache License 2.0](LICENSE). iac-guard orchestrates third-party scanners ([Gitleaks](https://github.com/gitleaks/gitleaks), [Checkov](https://github.com/bridgecrewio/checkov), [Semgrep](https://github.com/semgrep/semgrep)), which are distributed under their own licenses.
+[Apache License 2.0](https://github.com/chafiq753/iac-guard/blob/main/LICENSE). iac-guard orchestrates third-party scanners ([Gitleaks](https://github.com/gitleaks/gitleaks), [Checkov](https://github.com/bridgecrewio/checkov), [Semgrep](https://github.com/semgrep/semgrep)), which are distributed under their own licenses.
 
 ---
 

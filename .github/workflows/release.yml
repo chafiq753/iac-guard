@@ -1,0 +1,110 @@
+# Publication d'une version, déclenchée par un tag vX.Y.Z :
+#
+#   git tag -a v1.0.0 -m "iac-guard 1.0.0" && git push origin v1.0.0
+#
+#   1. build   : vérifie que le tag = iacguard.__version__, construit le
+#                package, le contrôle (twine) et lance les tests sur le wheel
+#   2. pypi    : publie sur PyPI (Trusted Publishing : aucun token stocké)
+#   3. release : crée la Release GitHub et déplace le tag majeur (v1) pour
+#                que `uses: chafiq753/iac-guard@v1` prenne cette version
+#
+# L'image Docker est publiée en parallèle par docker.yml (:1.0.0, :1, :latest).
+name: Release
+
+on:
+  push:
+    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Le tag correspond à la version du package
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          VERSION=$(python -c "import re;print(re.search(r'__version__ = \"(.+?)\"', open('iacguard/__init__.py').read()).group(1))")
+          echo "tag=$TAG  package=$VERSION"
+          if [ "$TAG" != "$VERSION" ]; then
+            echo "::error::Le tag v$TAG ne correspond pas à __version__ = $VERSION (iacguard/__init__.py)"
+            exit 1
+          fi
+
+      - name: Construire le package
+        run: |
+          python -m pip install --upgrade build twine
+          python -m build
+          python -m twine check --strict dist/*
+
+      - name: Tester le wheel construit
+        run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/pip install dist/*.whl pytest checkov
+          curl -sSfL https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz \
+            | sudo tar -xz -C /usr/local/bin gitleaks
+          /tmp/venv/bin/iacguard --version
+          # Le dossier iacguard/ du dépôt est retiré : les tests utilisent
+          # forcément le package installé, pas les sources.
+          mv iacguard /tmp/iacguard-src
+          /tmp/venv/bin/python -m pytest -q
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  pypi:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/iacguard-cli/
+    permissions:
+      id-token: write          # Trusted Publishing (OIDC)
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  release:
+    needs: pypi
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Release GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/* \
+            --title "iac-guard ${GITHUB_REF_NAME}" \
+            --generate-notes \
+            --verify-tag
+
+      - name: Déplacer le tag majeur (v1, v2...)
+        run: |
+          MAJOR="${GITHUB_REF_NAME%%.*}"
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -fa "$MAJOR" -m "iac-guard $GITHUB_REF_NAME" "$GITHUB_REF_NAME^{commit}"
+          git push -f origin "refs/tags/$MAJOR"
