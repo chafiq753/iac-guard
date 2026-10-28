@@ -109,8 +109,8 @@ def evaluate(
     """
     if fail_on is not None and fail_on not in SEVERITY_ORDER:
         raise ValueError(
-            f"Seuil de blocage inconnu : {fail_on!r}. "
-            f"Valeurs possibles : {', '.join(SEVERITY_ORDER)}."
+            f"Unknown fail_on threshold: {fail_on!r}. "
+            f"Allowed values: {', '.join(SEVERITY_ORDER)}."
         )
 
     ignored = set(ignored_rules)
@@ -122,7 +122,7 @@ def evaluate(
     score = compute_score(counts)
     blocked = exceeds_threshold(counts, fail_on)
     reason = (
-        f"Blocage : au moins un finding atteint la gravité '{fail_on}' ou pire."
+        f"Blocked: at least one finding is '{fail_on}' or worse."
         if blocked
         else None
     )

@@ -9,4 +9,4 @@ de la base de données. Le dashboard (dossiers backend/ et frontend/) est une
 option qui consomme les rapports produits ici.
 """
 
-__version__ = "1.0.1"
+__version__ = "1.1.0"

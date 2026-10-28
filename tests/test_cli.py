@@ -77,15 +77,15 @@ def test_clean_scan_passes(fake_tools, tmp_path: Path) -> None:
     fake_tools()
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_OK, result.output
-    assert "PASSÉ" in result.stdout
-    assert "Aucun problème" in result.stdout
+    assert "PASSED" in result.stdout
+    assert "No issues" in result.stdout
 
 
 def test_high_blocks_by_default(fake_tools, tmp_path: Path) -> None:
     fake_tools(checkov=[_finding(ToolName.CHECKOV, Severity.HIGH)])
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_BLOCKED, result.output
-    assert "BLOQUÉ" in result.stdout
+    assert "BLOCKED" in result.stdout
 
 
 def test_medium_does_not_block_by_default(fake_tools, tmp_path: Path) -> None:
@@ -110,7 +110,7 @@ def test_fail_on_none_never_blocks(fake_tools, tmp_path: Path) -> None:
     fake_tools(gitleaks=[_finding(ToolName.GITLEAKS, Severity.CRITICAL)])
     result = runner.invoke(app, ["scan", str(tmp_path), "--fail-on", "none"])
     assert result.exit_code == EXIT_OK, result.output
-    assert "RAPPORT SEULEMENT" in result.stdout
+    assert "REPORT ONLY" in result.stdout
 
 
 def test_typo_in_fail_on_is_rejected(fake_tools, tmp_path: Path) -> None:
@@ -135,7 +135,7 @@ def test_missing_scanner_warns_but_does_not_fail(fake_tools, tmp_path: Path) -> 
     fake_tools(semgrep=None)
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_OK, result.output
-    assert "scan partiel" in result.stderr
+    assert "partial scan" in result.stderr
     assert "--strict" in result.stderr
 
 
@@ -156,7 +156,7 @@ def test_no_scanner_at_all_is_an_error(fake_tools, tmp_path: Path) -> None:
     fake_tools(gitleaks=None, checkov=None, semgrep=None)
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_ERROR, result.output
-    assert "Aucun scanner" in result.stderr
+    assert "No scanner" in result.stderr
 
 
 # --------------------------------------------------------------------------- #
@@ -201,7 +201,7 @@ def test_output_file_json(fake_tools, tmp_path: Path) -> None:
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["findings"][0]["rule_id"] == "RULE_1"
     assert result.stdout == ""
-    assert "BLOQUÉ" in result.stderr
+    assert "BLOCKED" in result.stderr
 
 
 def test_output_file_table(fake_tools, tmp_path: Path) -> None:
@@ -210,7 +210,7 @@ def test_output_file_table(fake_tools, tmp_path: Path) -> None:
     result = runner.invoke(app, ["scan", str(tmp_path), "-o", str(out)])
     assert result.exit_code == EXIT_OK, result.output
     text = out.read_text(encoding="utf-8")
-    assert "CKV_AWS_21" in text and "PASSÉ" in text
+    assert "CKV_AWS_21" in text and "PASSED" in text
 
 
 def test_table_sorted_most_severe_first(fake_tools, tmp_path: Path) -> None:
@@ -323,7 +323,7 @@ def test_github_annotations_and_summary(fake_tools, tmp_path: Path, monkeypatch)
     assert "risque%3A" not in lines[0].split("::")[2]     # ':' échappé seulement dans les propriétés
     assert lines[1].startswith("::notice ")                # low -> simple note
     md = summary.read_text(encoding="utf-8")
-    assert "BLOQUÉ" in md and "](https://github.com/o/r/blob/abc/infra/main.tf#L28-L31)" in md
+    assert "BLOCKED" in md and "](https://github.com/o/r/blob/abc/infra/main.tf#L28-L31)" in md
     assert "blocked=true" in outputs.read_text(encoding="utf-8")
 
 
@@ -358,7 +358,7 @@ def test_details_shows_code_but_never_secrets(fake_tools, tmp_path: Path) -> Non
     result = runner.invoke(app, ["scan", str(tmp_path), "--details"])
     assert 'acl = "public-read"' in result.stdout
     assert "AKIA_FAUX_POUR_TEST" not in result.stdout
-    assert "masqué" in result.stdout
+    assert "hidden" in result.stdout
 
 
 # --------------------------------------------------------------------------- #
@@ -388,7 +388,7 @@ def test_show_gives_details_of_numbered_row(fake_tools, tmp_path: Path) -> None:
 def test_show_without_previous_scan() -> None:
     result = runner.invoke(app, ["show", "1"])
     assert result.exit_code == EXIT_ERROR
-    assert "Aucun scan" in result.stdout
+    assert "No recent scan" in result.stdout
 
 
 # --------------------------------------------------------------------------- #

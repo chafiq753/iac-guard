@@ -67,7 +67,7 @@ TOOL_LABEL = {
 
 # Comment installer chaque scanner (affiché par `doctor`).
 INSTALL_HINT = {
-    ToolName.GITLEAKS: "binaire à télécharger : https://github.com/gitleaks/gitleaks/releases",
+    ToolName.GITLEAKS: "download the binary: https://github.com/gitleaks/gitleaks/releases",
     ToolName.CHECKOV: "pip install checkov",
     ToolName.SEMGREP: "pip install semgrep",
 }
@@ -96,9 +96,9 @@ class FailOn(str, Enum):
 
 app = typer.Typer(
     name="iacguard",
-    help="Scanner de sécurité pour Infrastructure as Code : secrets (Gitleaks), "
-    "mauvaises configurations (Checkov) et vulnérabilités du code (Semgrep), "
-    "dans un seul rapport avec un score et un verdict.",
+    help="Security scanner for Infrastructure as Code: secrets (Gitleaks), "
+    "misconfigurations (Checkov) and code vulnerabilities (Semgrep), "
+    "in one report with a score and a verdict.",
     no_args_is_help=True,
     add_completion=False,
 )
@@ -125,8 +125,8 @@ def _parse_tools(value: str) -> list[ToolName]:
     unknown = [n for n in names if n not in allowed]
     if unknown or not names:
         raise typer.BadParameter(
-            f"outil inconnu : {', '.join(unknown) or '(vide)'}. "
-            f"Choix possibles : {', '.join(allowed)}.",
+            f"unknown tool: {', '.join(unknown) or '(empty)'}. "
+            f"Allowed: {', '.join(allowed)}.",
             param_hint="--tools",
         )
     # Ordre fixe (celui de DEFAULT_TOOLS), sans doublon.
@@ -175,7 +175,7 @@ def _location(f: Finding, root: Path) -> Text:
 def _location_extra(f: Finding) -> str | None:
     extra = []
     if f.line_end and f.line_start and f.line_end > f.line_start:
-        extra.append(f"lignes {f.line_start}-{f.line_end}")
+        extra.append(f"lines {f.line_start}-{f.line_end}")
     if f.resource:
         extra.append(f.resource)
     if commit := _commit(f):
@@ -226,24 +226,24 @@ def _render_finding(console: Console, n: int, f: Finding, root: Path,
         (f" {f.severity.value.upper()} ", SEVERITY_STYLE[f.severity.value]),
         f"  {f.title}",
     ))
-    console.print(Text.assemble("   Fichier   : ", _location(f, root)))
+    console.print(Text.assemble("   File      : ", _location(f, root)))
     if extra := _location_extra(f):
-        console.print(f"   Détail    : {extra}", highlight=False)
-    console.print(f"   Règle     : {f.rule_id} ({f.source.value})", highlight=False)
+        console.print(f"   Details   : {extra}", highlight=False)
+    console.print(f"   Rule      : {f.rule_id} ({f.source.value})", highlight=False)
     if ignored_reason:
-        console.print(Text(f"   Ignoré    : {ignored_reason} (.iacguard.yml, ne compte pas)",
+        console.print(Text(f"   Ignored   : {ignored_reason} (.iacguard.yml, not counted)",
                            style="yellow"))
     if f.remediation:
-        console.print(f"   Corriger  : {f.remediation}", highlight=False)
+        console.print(f"   Fix       : {f.remediation}", highlight=False)
     if _is_secret(f):
-        console.print(Text("   Code      : masqué (contient un secret)", style="dim"))
+        console.print(Text("   Code      : hidden (contains a secret)", style="dim"))
         return
     absolute = _abs_file(f, root)
     snippet = _snippet(f, root)
     if snippet:
         console.print("   Code      :")
     for num, line in snippet:
-        shown = "*** masqué (secret) ***" if (absolute, num) in hidden else line.rstrip()
+        shown = "*** hidden (secret) ***" if (absolute, num) in hidden else line.rstrip()
         console.print(Text(f"   {num:>6} | {shown}", style="dim"))
 
 
@@ -269,16 +269,16 @@ def _tool_line(run: ToolRun) -> Text:
     if run.ok:
         version = f" {run.version}" if run.version else ""
         return Text.assemble(
-            "  ", ("OK     ", "green"), label, (version, "dim"),
+            "  ", ("OK      ", "green"), label, (version, "dim"),
             f"  {_plural(len(run.findings), 'finding')}",
         )
-    status = "ABSENT " if run.status == "missing" else "ERREUR "
+    status = "MISSING " if run.status == "missing" else "ERROR   "
     # Le message peut finir par la sortie d'erreur du scanner (traceback...) :
     # on montre la phrase d'explication et la dernière ligne, pas tout.
     lines = [line.strip() for line in (run.message or "").splitlines() if line.strip()]
     text = Text.assemble("  ", (status, "bold yellow"), label, f" {lines[0] if lines else ''}")
     if len(lines) > 1:
-        text.append(f"\n{' ' * 18}{lines[-1]}", style="dim")
+        text.append(f"\n{' ' * 19}{lines[-1]}", style="dim")
     return text
 
 
@@ -293,38 +293,38 @@ def _counts_line(result: ScanResult) -> Text:
             text.append(" · ")
     text.append(")")
     if result.decision.ignored_count:
-        text.append(f"  dont {result.decision.ignored_count} ignoré(s)", style="dim")
+        text.append(f"  incl. {result.decision.ignored_count} ignored", style="dim")
     if result.excluded_count:
-        text.append(f"  + {result.excluded_count} dans des chemins exclus", style="dim")
+        text.append(f"  + {result.excluded_count} in excluded paths", style="dim")
     return text
 
 
 def _verdict(result: ScanResult, fail_on: FailOn) -> Text:
     score = result.decision.score
     text = Text.assemble(
-        "Score : ", (f"{score.score}/100", "bold"), f" (note {score.grade})   Verdict : ",
+        "Score: ", (f"{score.score}/100", "bold"), f" (grade {score.grade})   Verdict: ",
     )
     if result.decision.blocked:
-        text.append("BLOQUÉ", style="bold white on red")
-        text.append(f"  au moins un finding de gravité '{fail_on.value}' ou pire")
+        text.append("BLOCKED", style="bold white on red")
+        text.append(f"  at least one finding is '{fail_on.value}' or worse")
     elif fail_on is FailOn.none:
-        text.append("RAPPORT SEULEMENT", style="bold")
-        text.append("  (--fail-on none : ne bloque jamais)")
+        text.append("REPORT ONLY", style="bold")
+        text.append("  (--fail-on none: never blocks)")
     else:
-        text.append("PASSÉ", style="bold green")
-        text.append(f"  aucun finding de gravité '{fail_on.value}' ou pire")
+        text.append("PASSED", style="bold green")
+        text.append(f"  no finding is '{fail_on.value}' or worse")
     return text
 
 
 def _render_table(console: Console, result: ScanResult, path: Path, fail_on: FailOn,
                   details: bool = False) -> None:
     meta = result.report.scan
-    console.print(Text(f"iac-guard {__version__}  -  scan de {path}", style="bold"))
-    ctx = [f"Dépôt : {meta.repo}"]
+    console.print(Text(f"iac-guard {__version__}  -  scanning {path}", style="bold"))
+    ctx = [f"Repo: {meta.repo}"]
     if meta.branch:
-        ctx.append(f"Branche : {meta.branch}")
+        ctx.append(f"Branch: {meta.branch}")
     if meta.commit_sha:
-        ctx.append(f"Commit : {meta.commit_sha[:7]}")
+        ctx.append(f"Commit: {meta.commit_sha[:7]}")
     console.print(Text("   ".join(ctx), style="dim"))
     console.print()
 
@@ -332,11 +332,11 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
     if findings:
         table = Table(show_lines=False, header_style="bold", expand=False)
         table.add_column("#", justify="right", style="dim", no_wrap=True)
-        table.add_column("Gravité", no_wrap=True)
-        table.add_column("Outil", no_wrap=True)
-        table.add_column("Règle", overflow="fold")
-        table.add_column("Emplacement", overflow="fold")
-        table.add_column("Problème")
+        table.add_column("Severity", no_wrap=True)
+        table.add_column("Tool", no_wrap=True)
+        table.add_column("Rule", overflow="fold")
+        table.add_column("Location", overflow="fold")
+        table.add_column("Issue")
         for n, f in enumerate(findings, 1):
             is_ignored = f.fingerprint in result.ignored
             table.add_row(
@@ -344,7 +344,7 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
                 Text(f.severity.value.upper(),
                      style="dim strike" if is_ignored else SEVERITY_STYLE[f.severity.value]),
                 f.source.value,
-                f.rule_id + (" (ignoré)" if is_ignored else ""),
+                f.rule_id + (" (ignored)" if is_ignored else ""),
                 _location(f, path),
                 f.title,
                 style="dim" if is_ignored else None,
@@ -353,10 +353,10 @@ def _render_table(console: Console, result: ScanResult, path: Path, fail_on: Fai
         if details:
             _render_details(console, findings, path, result.ignored)
         else:
-            console.print(Text("Détails d'un problème : iacguard show <#>   (ex : iacguard show 1)",
+            console.print(Text("Details of an issue: iacguard show <#>   (e.g. iacguard show 1)",
                                style="dim"))
     else:
-        console.print(Text("Aucun problème détecté.", style="green"))
+        console.print(Text("No issues found.", style="green"))
     console.print()
     console.print(_counts_line(result))
     console.print(_verdict(result, fail_on))
@@ -401,7 +401,7 @@ def _version_callback(value: bool) -> None:
 def main(
     version: Annotated[
         bool | None,
-        typer.Option("--version", "-V", help="Affiche la version et quitte.",
+        typer.Option("--version", "-V", help="Show the version and exit.",
                      callback=_version_callback, is_eager=True),
     ] = None,
 ) -> None:
@@ -412,72 +412,72 @@ def main(
 def scan(
     path: Annotated[
         Path,
-        typer.Argument(help="Dossier à scanner.", exists=True, file_okay=False,
+        typer.Argument(help="Directory to scan.", exists=True, file_okay=False,
                        dir_okay=True, resolve_path=True),
     ] = Path("."),
     fail_on: Annotated[
         FailOn | None,
         typer.Option("--fail-on", case_sensitive=False,
-                     help="Gravité à partir de laquelle le scan échoue (code 1). "
-                     "'high' bloque sur high ET critical. 'none' : ne bloque jamais. "
-                     "Défaut : celui de .iacguard.yml, sinon high."),
+                     help="Lowest severity that fails the scan (exit code 1). "
+                     "'high' blocks on high AND critical. 'none': never blocks. "
+                     "Default: .iacguard.yml, otherwise high."),
     ] = None,
     fmt: Annotated[
         OutputFormat,
-        typer.Option("--format", "-f", case_sensitive=False, help="Format du rapport."),
+        typer.Option("--format", "-f", case_sensitive=False, help="Report format."),
     ] = OutputFormat.table,
     output: Annotated[
         Path | None,
         typer.Option("--output", "-o", dir_okay=False, writable=True,
-                     help="Écrit le rapport dans ce fichier (UTF-8) au lieu du terminal."),
+                     help="Write the report to this file (UTF-8) instead of the terminal."),
     ] = None,
     tools: Annotated[
         str | None,
         typer.Option("--tools", "-t",
-                     help="Scanners à lancer, séparés par des virgules "
-                     "(défaut : gitleaks,checkov,semgrep)."),
+                     help="Scanners to run, comma-separated "
+                     "(default: gitleaks,checkov,semgrep)."),
     ] = None,
     strict: Annotated[
         bool,
         typer.Option("--strict",
-                     help="Échoue (code 2) si un scanner n'a pas pu tourner. "
-                     "Recommandé en CI : sinon un scanner absent passe inaperçu."),
+                     help="Fail (exit code 2) if a scanner could not run. "
+                     "Recommended in CI, otherwise a missing scanner goes unnoticed."),
     ] = False,
     details: Annotated[
         bool,
         typer.Option("--details", "-d",
-                     help="Après le tableau, les détails de TOUS les problèmes "
-                     "(pour un seul : iacguard show <#>)."),
+                     help="After the table, print details of ALL issues "
+                     "(for a single one: iacguard show <#>)."),
     ] = False,
     semgrep_config: Annotated[
         str | None,
         typer.Option("--semgrep-config",
-                     help="Règles Semgrep : 'auto' (registre en ligne) ou un fichier local."),
+                     help="Semgrep rules: 'auto' (online registry) or a local rules file."),
     ] = None,
     config: Annotated[
         Path | None,
         typer.Option("--config", "-c", exists=True, dir_okay=False,
-                     help="Fichier de configuration (défaut : .iacguard.yml du dossier scanné)."),
+                     help="Configuration file (default: .iacguard.yml in the scanned directory)."),
     ] = None,
     sarif: Annotated[
         Path | None,
         typer.Option("--sarif", dir_okay=False, writable=True,
-                     help="Écrit AUSSI un rapport SARIF dans ce fichier (pour GitHub Code scanning)."),
+                     help="ALSO write a SARIF report to this file (for GitHub Code scanning)."),
     ] = None,
     annotations: Annotated[
         bool,
         typer.Option("--annotations/--no-annotations",
-                     help="GitHub Actions : annoter les lignes de la PR. Désactiver si le "
-                     "SARIF est envoyé à Code scanning (sinon chaque problème apparaît deux fois)."),
+                     help="GitHub Actions: annotate the PR lines. Disable when the SARIF is "
+                     "uploaded to Code scanning (otherwise each issue appears twice)."),
     ] = True,
     since: Annotated[
         str | None,
         typer.Option("--since",
-                     help="Gitleaks : seulement les commits après cette référence "
-                     "(ex : origin/main). Automatique dans une pull request GitHub."),
+                     help="Gitleaks: only scan commits after this ref "
+                     "(e.g. origin/main). Automatic in GitHub pull requests."),
     ] = None,
 ) -> None:
-    """Scanne un dossier et affiche les problèmes trouvés, le score et le verdict."""
+    """Scan a directory and show the issues found, the score and the verdict."""
     err = Console(stderr=True, emoji=False, highlight=False)
 
     # Configuration : option de la ligne de commande > .iacguard.yml > défaut.
@@ -488,7 +488,7 @@ def scan(
         err.print(Text(str(exc), style="bold red"))
         raise typer.Exit(EXIT_ERROR)
     if cfg_file:
-        err.print(Text(f"Configuration : {_display_path(cfg_file.resolve())}", style="dim"))
+        err.print(Text(f"Config: {_display_path(cfg_file.resolve())}", style="dim"))
     if fail_on is None:
         fail_on = FailOn(cfg.fail_on) if cfg.fail_on else FailOn.high
     if tools is None:
@@ -500,19 +500,19 @@ def scan(
     # Pull request : Gitleaks ne lit que les commits de la PR.
     since = since or pull_request_base()
     if since and not ref_exists(path, since):
-        err.print(Text(f"Référence {since} introuvable : Gitleaks scanne tout l'historique "
-                       "(dans le workflow, checkout avec fetch-depth: 0).", style="yellow"))
+        err.print(Text(f"Ref {since} not found: Gitleaks scans the whole history "
+                       "(in the workflow, use checkout with fetch-depth: 0).", style="yellow"))
         since = None
 
     def on_start(tool: ToolName) -> None:
         if err.is_terminal:
-            status.update(f"{TOOL_LABEL[tool]} en cours...")
+            status.update(f"Running {TOOL_LABEL[tool]}...")
 
     def on_done(run: ToolRun) -> None:
         err.print(_tool_line(run))
 
-    err.print(Text(f"Scanners ({', '.join(t.value for t in selected)}) :", style="bold"))
-    with err.status("Démarrage...", spinner="dots") as status:
+    err.print(Text(f"Scanners ({', '.join(t.value for t in selected)}):", style="bold"))
+    with err.status("Starting...", spinner="dots") as status:
         result = run_scan(
             path,
             selected,
@@ -531,13 +531,13 @@ def scan(
 
     failed = result.failed_tools
     if len(failed) == len(result.runs):
-        err.print(Text("Aucun scanner n'a pu tourner : rien n'a été vérifié. "
-                       "Lance `iacguard doctor` pour voir ce qui manque.", style="bold red"))
+        err.print(Text("No scanner could run: nothing was checked. "
+                       "Run `iacguard doctor` to see what is missing.", style="bold red"))
         raise typer.Exit(EXIT_ERROR)
 
     for entry in result.expired_ignores:
-        err.print(Text(f"Exception expirée le {entry.expires} pour {entry.rule} : "
-                       "le problème compte de nouveau (à revoir dans .iacguard.yml).",
+        err.print(Text(f"Exception for {entry.rule} expired on {entry.expires}: "
+                       "the issue counts again (review it in .iacguard.yml).",
                        style="yellow"))
 
     _write_output(result, fmt, path, fail_on, output, details)
@@ -554,15 +554,15 @@ def scan(
         err.print(_counts_line(result))
         err.print(_verdict(result, fail_on))
     if output:
-        err.print(Text(f"Rapport écrit dans {output}", style="dim"))
+        err.print(Text(f"Report written to {output}", style="dim"))
     if sarif:
-        err.print(Text(f"Rapport SARIF écrit dans {sarif}", style="dim"))
+        err.print(Text(f"SARIF report written to {sarif}", style="dim"))
 
     if failed:
-        names = " et ".join(TOOL_LABEL[r.tool] for r in failed)
-        verb = "n'ont pas tourné" if len(failed) > 1 else "n'a pas tourné"
-        hint = "" if strict else " Ajoute --strict pour faire échouer le scan dans ce cas."
-        err.print(Text(f"Attention : scan partiel, {names} {verb}.{hint}",
+        names = " and ".join(TOOL_LABEL[r.tool] for r in failed)
+        verb = "did not run"
+        hint = "" if strict else " Add --strict to fail the scan in this case."
+        err.print(Text(f"Warning: partial scan, {names} {verb}.{hint}",
                        style="bold yellow"))
 
     if result.decision.blocked:
@@ -587,8 +587,8 @@ def _github_report(result: ScanResult, path: Path, fail_on: FailOn,
     summary_file = os.environ.get("GITHUB_STEP_SUMMARY")
     if summary_file:
         d = result.decision
-        verdict = ("BLOQUÉ" if d.blocked else
-                   "rapport seulement" if threshold is None else "passé")
+        verdict = ("BLOCKED" if d.blocked else
+                   "report only" if threshold is None else "passed")
         with open(summary_file, "a", encoding="utf-8") as fh:
             fh.write(github.step_summary(findings, path, d.score.score, d.score.grade, verdict))
     # Pour les étapes suivantes du workflow (et la future GitHub Action).
@@ -621,21 +621,21 @@ def _save_last_scan(result: ScanResult, root: Path) -> None:
 
 @app.command()
 def show(
-    number: Annotated[int, typer.Argument(help="Numéro du problème (colonne # du tableau).", min=1)],
+    number: Annotated[int, typer.Argument(help="Issue number (the # column of the table).", min=1)],
 ) -> None:
-    """Détails d'un problème du dernier scan : fichier, ligne, ressource, code, correction."""
+    """Details of an issue from the last scan: file, line, resource, code, fix."""
     console = Console(emoji=False, highlight=False)
     try:
         data = json.loads(_cache_file().read_text(encoding="utf-8"))
         report = ScanReport.model_validate(data["report"])
         root = Path(data["root"])
     except (OSError, ValueError, KeyError):
-        console.print(Text("Aucun scan récent : lance d'abord `iacguard scan .`", style="bold red"))
+        console.print(Text("No recent scan: run `iacguard scan .` first", style="bold red"))
         raise typer.Exit(EXIT_ERROR)
 
     findings = _sorted(report.findings)
     if number > len(findings):
-        console.print(Text(f"Il n'y a que {len(findings)} problème(s) dans le dernier scan.",
+        console.print(Text(f"The last scan only has {len(findings)} issue(s).",
                            style="bold red"))
         raise typer.Exit(EXIT_ERROR)
     f = findings[number - 1]
@@ -660,16 +660,16 @@ def _default_branch(path: Path) -> str:
 def init(
     path: Annotated[
         Path,
-        typer.Argument(help="Racine du dépôt.", exists=True, file_okay=False, resolve_path=True),
+        typer.Argument(help="Repository root.", exists=True, file_okay=False, resolve_path=True),
     ] = Path("."),
     github: Annotated[
         bool,
-        typer.Option("--github", help="Ajoute aussi le workflow GitHub Actions "
-                     "(scan à chaque pull request, alertes dans la PR)."),
+        typer.Option("--github", help="Also add the GitHub Actions workflow "
+                     "(scan on every pull request, alerts in the PR)."),
     ] = False,
-    force: Annotated[bool, typer.Option("--force", help="Remplace les fichiers existants.")] = False,
+    force: Annotated[bool, typer.Option("--force", help="Overwrite existing files.")] = False,
 ) -> None:
-    """Prépare un dépôt : crée .iacguard.yml (et le workflow GitHub avec --github)."""
+    """Set up a repository: create .iacguard.yml (and the GitHub workflow with --github)."""
     console = Console(emoji=False, highlight=False)
     templates = resources.files("iacguard") / "templates"
     files = {path / ".iacguard.yml": (templates / "iacguard.yml").read_text(encoding="utf-8")}
@@ -681,28 +681,28 @@ def init(
     for target, content in files.items():
         shown = _display_path(target)
         if target.exists() and not force:
-            console.print(Text.assemble(("  EXISTE ", "yellow"), shown, ("  (--force pour remplacer)", "dim")))
+            console.print(Text.assemble(("  EXISTS  ", "yellow"), shown, ("  (--force to overwrite)", "dim")))
             continue
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_text(content, encoding="utf-8")
-        console.print(Text.assemble(("  CRÉÉ   ", "green"), shown))
+        console.print(Text.assemble(("  CREATED ", "green"), shown))
 
     console.print()
-    console.print(Text("Ensuite :", style="bold"))
-    console.print("  1. iacguard scan .            (scan local)")
+    console.print(Text("Next:", style="bold"))
+    console.print("  1. iacguard scan .            (local scan)")
     if github:
-        console.print("  2. git add .iacguard.yml .github && git commit -m \"Ajout iac-guard\" && git push")
-        console.print("  3. Sur GitHub : Settings > Rules > Rulesets > New branch ruleset")
-        console.print("     > Require status checks to pass > ajouter « iac-guard »")
-        console.print("     (le check apparaît après le premier scan : bloque le merge si le scan échoue)")
+        console.print("  2. git add .iacguard.yml .github && git commit -m \"Add iac-guard\" && git push")
+        console.print("  3. On GitHub: Settings > Rules > Rulesets > New branch ruleset")
+        console.print("     > Require status checks to pass > add \"iac-guard\"")
+        console.print("     (the check appears after the first scan; it blocks the merge if the scan fails)")
     else:
-        console.print("  Pour scanner à chaque pull request GitHub : iacguard init --github")
+        console.print("  To scan every GitHub pull request: iacguard init --github")
     raise typer.Exit(EXIT_OK)
 
 
 @app.command()
 def doctor() -> None:
-    """Vérifie que les scanners sont installés (code 1 s'il en manque un)."""
+    """Check that the scanners are installed (exit code 1 if one is missing)."""
     console = Console(emoji=False, highlight=False)
     missing = 0
     for tool in DEFAULT_TOOLS:
@@ -710,14 +710,14 @@ def doctor() -> None:
         label = TOOL_LABEL[tool].ljust(9)
         if exe:
             version = _version(exe, VERSION_ARGS[tool]) or "?"
-            console.print(Text.assemble(("  OK     ", "green"), label, f" {version}", (f"  {exe}", "dim")))
+            console.print(Text.assemble(("  OK      ", "green"), label, f" {version}", (f"  {exe}", "dim")))
         else:
             missing += 1
-            console.print(Text.assemble(("  ABSENT ", "bold yellow"), label, f" {INSTALL_HINT[tool]}"))
+            console.print(Text.assemble(("  MISSING ", "bold yellow"), label, f" {INSTALL_HINT[tool]}"))
     git = _resolve("git")
     console.print(Text.assemble(
-        ("  OK     ", "green") if git else ("  ABSENT ", "yellow"), "Git".ljust(9),
-        ("  historique Git scanné par Gitleaks", "dim") if git else " sans git, Gitleaks ne lit que les fichiers",
+        ("  OK      ", "green") if git else ("  MISSING ", "yellow"), "Git".ljust(9),
+        ("  Git history scanned by Gitleaks", "dim") if git else " without git, Gitleaks only reads the files",
     ))
     raise typer.Exit(EXIT_BLOCKED if missing else EXIT_OK)
 

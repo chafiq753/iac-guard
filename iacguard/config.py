@@ -61,7 +61,7 @@ class IgnoreEntry(BaseModel):
     def _rule_not_empty(cls, v: str) -> str:
         v = v.strip()
         if not v:
-            raise ValueError("`rule` est vide")
+            raise ValueError("`rule` is empty")
         return v
 
     @field_validator("reason")
@@ -70,8 +70,8 @@ class IgnoreEntry(BaseModel):
         v = v.strip()
         if len(v) < MIN_REASON_LENGTH:
             raise ValueError(
-                f"justification trop courte ({MIN_REASON_LENGTH} caractères minimum) : "
-                "explique pourquoi ce risque est accepté"
+                f"reason too short ({MIN_REASON_LENGTH} characters minimum): "
+                "explain why this risk is accepted"
             )
         return v
 
@@ -124,23 +124,23 @@ def load_config(path: Path) -> Config:
     try:
         data = yaml.safe_load(path.read_text(encoding="utf-8"))
     except OSError as exc:
-        raise ConfigError(f"Impossible de lire {path} : {exc}") from exc
+        raise ConfigError(f"Cannot read {path}: {exc}") from exc
     except yaml.YAMLError as exc:
-        raise ConfigError(f"{path.name} n'est pas un YAML valide : {exc}") from exc
+        raise ConfigError(f"{path.name} is not valid YAML: {exc}") from exc
     if data is None:
         return Config()
     if not isinstance(data, dict):
-        raise ConfigError(f"{path.name} doit contenir des clés (fail_on, exclude, ignore...).")
+        raise ConfigError(f"{path.name} must contain keys (fail_on, exclude, ignore...).")
     try:
         return Config.model_validate(data)
     except ValidationError as exc:
         lines = []
         for err in exc.errors():
-            where = ".".join(str(x) for x in err["loc"]) or "(racine)"
+            where = ".".join(str(x) for x in err["loc"]) or "(root)"
             msg = err["msg"].removeprefix("Value error, ")
             if err["type"] == "extra_forbidden":
-                msg = "clé inconnue (faute de frappe ?)"
+                msg = "unknown key (typo?)"
             elif err["type"] == "missing":
-                msg = "obligatoire"
-            lines.append(f"  - {where} : {msg}")
-        raise ConfigError(f"Erreur dans {path.name} :\n" + "\n".join(lines)) from exc
+                msg = "required"
+            lines.append(f"  - {where}: {msg}")
+        raise ConfigError(f"Error in {path.name}:\n" + "\n".join(lines)) from exc

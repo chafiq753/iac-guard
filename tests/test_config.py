@@ -73,12 +73,12 @@ def test_empty_config_is_fine(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("text", "expected"),
     [
-        ("fail-on: high\n", "clé inconnue"),                                     # faute de frappe
+        ("fail-on: high\n", "unknown key"),                                     # faute de frappe
         ("fail_on: hight\n", "fail_on"),                                         # valeur inconnue
-        ("ignore:\n  - rule: CKV_AWS_20\n", "obligatoire"),                     # pas de raison
-        ("ignore:\n  - rule: CKV_AWS_20\n    reason: ok\n", "trop courte"),      # raison bidon
+        ("ignore:\n  - rule: CKV_AWS_20\n", "required"),                     # pas de raison
+        ("ignore:\n  - rule: CKV_AWS_20\n    reason: ok\n", "too short"),      # raison bidon
         ("ignore: [\n", "YAML"),
-        ("- juste une liste\n", "clés"),
+        ("- juste une liste\n", "must contain keys"),
     ],
 )
 def test_invalid_config_is_rejected(tmp_path: Path, text: str, expected: str) -> None:
@@ -118,7 +118,7 @@ def test_ignored_finding_does_not_block(fake_checkov, tmp_path: Path) -> None:
     fake_checkov([_f("CKV_AWS_20", Severity.HIGH)])
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_OK, result.output
-    assert "(ignoré)" in result.stdout
+    assert "(ignored)" in result.stdout
     assert "Bucket public voulu" in runner.invoke(app, ["show", "1"]).stdout
 
 
@@ -137,7 +137,7 @@ def test_expired_ignore_blocks_again(fake_checkov, tmp_path: Path) -> None:
     fake_checkov([_f("CKV_AWS_20", Severity.HIGH)])
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_BLOCKED
-    assert "expirée" in result.stderr
+    assert "expired" in result.stderr
 
 
 def test_excluded_path_removed_from_report(fake_checkov, tmp_path: Path) -> None:
@@ -145,7 +145,7 @@ def test_excluded_path_removed_from_report(fake_checkov, tmp_path: Path) -> None
     fake_checkov([_f("CKV_AWS_20", Severity.HIGH, file="/examples/demo.tf")])
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_OK, result.output
-    assert "chemins exclus" in result.stdout
+    assert "in excluded" in result.stdout   # le terminal de test est étroit : retour à la ligne possible
 
 
 def test_cli_option_overrides_config(fake_checkov, tmp_path: Path) -> None:
@@ -169,7 +169,7 @@ def test_invalid_config_stops_scan(fake_checkov, tmp_path: Path) -> None:
     fake_checkov([])
     result = runner.invoke(app, ["scan", str(tmp_path)])
     assert result.exit_code == EXIT_ERROR
-    assert "clé inconnue" in result.stderr
+    assert "unknown key" in result.stderr
 
 
 # --------------------------------------------------------------------------- #

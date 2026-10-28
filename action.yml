@@ -5,67 +5,67 @@ branding:
   icon: "shield"
   color: "green"
 
-# Utilisation, dans le workflow d'un dépôt :
+# Usage, in a repository workflow:
 #
 #   - uses: actions/checkout@v4
 #     with:
-#       fetch-depth: 0            # Gitleaks lit tout l'historique Git
+#       fetch-depth: 0            # Gitleaks reads the whole Git history
 #   - uses: chafiq753/iac-guard@v1
 #     with:
 #       fail-on: high
 #
-# Le job échoue si un problème atteint `fail-on` : rendre ce job obligatoire
-# (protection de branche) grise le bouton Merge.
+# The job fails when an issue reaches `fail-on`: make this job a required
+# status check (branch protection / ruleset) to disable the Merge button.
 
 inputs:
   path:
-    description: "Dossier à scanner, relatif à la racine du dépôt."
+    description: "Directory to scan, relative to the repository root."
     default: "."
   fail-on:
     description: >-
-      Gravité qui fait échouer le scan : critical, high, medium, low, info ou none.
-      Vide : celle de .iacguard.yml, sinon high.
+      Lowest severity that fails the scan: critical, high, medium, low, info or none.
+      Empty: the value from .iacguard.yml, otherwise high.
     default: ""
   tools:
-    description: "Scanners à lancer, séparés par des virgules. Vide : .iacguard.yml, sinon les trois."
+    description: "Scanners to run, comma-separated. Empty: .iacguard.yml, otherwise all three."
     default: ""
   strict:
-    description: "Échouer si un scanner n'a pas pu tourner (true/false)."
+    description: "Fail if a scanner could not run (true/false)."
     default: "true"
   report:
-    description: "Fichier où écrire le rapport JSON."
+    description: "File to write the JSON report to."
     default: "iacguard-report.json"
   upload-sarif:
     description: >-
-      Envoyer le rapport SARIF à GitHub Code scanning (onglet Security, alertes
-      dans la PR, sans limite de nombre). Le workflow doit avoir
-      `permissions: security-events: write`. Gratuit pour un dépôt public.
+      Upload the SARIF report to GitHub Code scanning (Security tab, alerts in
+      the PR, no limit on the number of alerts). The workflow needs
+      `permissions: security-events: write`. Free for public repositories.
     default: "false"
   sarif:
-    description: "Fichier où écrire le rapport SARIF."
+    description: "File to write the SARIF report to."
     default: "iacguard.sarif"
   gitleaks-version:
-    description: "Version de Gitleaks à installer."
+    description: "Gitleaks version to install."
     default: "8.21.2"
 
 outputs:
   score:
-    description: "Score de 0 à 100."
+    description: "Score from 0 to 100."
     value: ${{ steps.scan.outputs.score }}
   grade:
-    description: "Note de A à F."
+    description: "Grade from A to F."
     value: ${{ steps.scan.outputs.grade }}
   blocked:
-    description: "true si le scan bloque."
+    description: "true if the scan blocks."
     value: ${{ steps.scan.outputs.blocked }}
   findings:
-    description: "Nombre total de problèmes."
+    description: "Total number of issues."
     value: ${{ steps.scan.outputs.findings }}
   report:
-    description: "Chemin du rapport JSON."
+    description: "Path of the JSON report."
     value: ${{ inputs.report }}
   sarif:
-    description: "Chemin du rapport SARIF."
+    description: "Path of the SARIF report."
     value: ${{ inputs.sarif }}
 
 runs:
@@ -75,9 +75,9 @@ runs:
       with:
         python-version: "3.12"
 
-    # Environnement isolé : les dépendances de Checkov/Semgrep ne se mélangent
-    # pas avec celles du projet de l'utilisateur.
-    - name: Installer iac-guard et les scanners
+    # Isolated environment: the Checkov/Semgrep dependencies don't mix with
+    # the user's project dependencies.
+    - name: Install iac-guard and the scanners
       shell: bash
       env:
         GITLEAKS_VERSION: ${{ inputs.gitleaks-version }}
@@ -95,11 +95,11 @@ runs:
           | tar -xz -C "$RUNNER_TEMP/bin" gitleaks
         echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
 
-    - name: Vérifier les scanners
+    - name: Check the scanners
       shell: bash
       run: iacguard doctor || true
 
-    - name: Scan iac-guard
+    - name: iac-guard scan
       id: scan
       shell: bash
       env:
@@ -110,25 +110,25 @@ runs:
         IN_REPORT: ${{ inputs.report }}
         IN_SARIF: ${{ inputs.sarif }}
         IN_UPLOAD: ${{ inputs.upload-sarif }}
-      # Les entrées passent par des variables d'environnement, jamais
-      # directement dans le script : pas d'injection de commande possible.
+      # Inputs go through environment variables, never straight into the
+      # script: no command injection possible.
       run: |
         set -uo pipefail
         args=(scan "$IN_PATH" -f json -o "$IN_REPORT" --sarif "$IN_SARIF")
-        # Entrée vide = laisser décider .iacguard.yml (sinon l'action
-        # écraserait toujours la config du dépôt).
+        # Empty input = let .iacguard.yml decide (otherwise the action would
+        # always override the repository config).
         if [ -n "$IN_FAIL_ON" ]; then args+=(--fail-on "$IN_FAIL_ON"); fi
         if [ -n "$IN_TOOLS" ]; then args+=(--tools "$IN_TOOLS"); fi
         if [ "$IN_STRICT" = "true" ]; then args+=(--strict); fi
-        # Avec Code scanning, les alertes s'affichent déjà dans la PR :
-        # pas d'annotations en double.
+        # With Code scanning, alerts already show up in the PR:
+        # no duplicate annotations.
         if [ "$IN_UPLOAD" = "true" ]; then args+=(--no-annotations); fi
         iacguard "${args[@]}"
 
-    # S'exécute même si le scan a bloqué (c'est justement là qu'on veut voir
-    # les alertes). Un échec d'envoi (permission manquante, dépôt privé sans
-    # GitHub Advanced Security) ne masque pas le verdict du scan.
-    - name: Envoyer le SARIF à GitHub Code scanning
+    # Runs even when the scan blocked (that's exactly when the alerts matter).
+    # An upload failure (missing permission, private repo without GitHub
+    # Advanced Security) does not hide the scan verdict.
+    - name: Upload SARIF to GitHub Code scanning
       if: ${{ always() && inputs.upload-sarif == 'true' }}
       continue-on-error: true
       uses: github/codeql-action/upload-sarif@v4

@@ -115,7 +115,7 @@ def _missing(tool: ToolName, binary: str) -> ToolRun:
     return ToolRun(
         tool=tool,
         status="missing",
-        message=f"{binary} introuvable dans le PATH : installe-le ou utilise l'image Docker iac-guard.",
+        message=f"{binary} not found in PATH: install it or use the iac-guard Docker image.",
     )
 
 
@@ -161,17 +161,17 @@ def run_gitleaks(
         try:
             proc = _run(cmd, timeout, cwd=path)
         except subprocess.TimeoutExpired:
-            return ToolRun(ToolName.GITLEAKS, "error", message=f"Gitleaks a dépassé {timeout}s.")
+            return ToolRun(ToolName.GITLEAKS, "error", message=f"Gitleaks timed out after {timeout}s.")
 
         if proc.returncode != 0:
             return ToolRun(
                 ToolName.GITLEAKS, "error",
-                message=f"Gitleaks a échoué (code {proc.returncode}).\n{_tail(proc.stderr)}",
+                message=f"Gitleaks failed (exit code {proc.returncode}).\n{_tail(proc.stderr)}",
             )
         try:
             data = _load_json_file(report)
         except json.JSONDecodeError as exc:
-            return ToolRun(ToolName.GITLEAKS, "error", message=f"Rapport Gitleaks illisible : {exc}")
+            return ToolRun(ToolName.GITLEAKS, "error", message=f"Unreadable Gitleaks report: {exc}")
 
     return ToolRun(
         ToolName.GITLEAKS, "ok",
@@ -195,19 +195,19 @@ def run_checkov(path: Path, *, binary: str = "checkov", timeout: int = DEFAULT_T
     try:
         proc = _run(cmd, timeout, cwd=path)
     except subprocess.TimeoutExpired:
-        return ToolRun(ToolName.CHECKOV, "error", message=f"Checkov a dépassé {timeout}s.")
+        return ToolRun(ToolName.CHECKOV, "error", message=f"Checkov timed out after {timeout}s.")
 
     if not proc.stdout.strip():
         return ToolRun(
             ToolName.CHECKOV, "error",
-            message=f"Checkov n'a rien renvoyé (code {proc.returncode}).\n{_tail(proc.stderr)}",
+            message=f"Checkov returned nothing (exit code {proc.returncode}).\n{_tail(proc.stderr)}",
         )
     try:
         data = json.loads(proc.stdout)
     except json.JSONDecodeError:
         return ToolRun(
             ToolName.CHECKOV, "error",
-            message=f"Sortie Checkov non JSON (code {proc.returncode}).\n{_tail(proc.stdout)}",
+            message=f"Checkov output is not JSON (exit code {proc.returncode}).\n{_tail(proc.stdout)}",
         )
 
     # Version : dans `summary` (rapport complet) ou à la racine (aucun fichier
@@ -259,23 +259,23 @@ def run_semgrep(
             # Pas de vérification de nouvelle version à chaque scan.
             proc = _run(cmd, timeout, cwd=path, env={"SEMGREP_ENABLE_VERSION_CHECK": "0"})
         except subprocess.TimeoutExpired:
-            return ToolRun(ToolName.SEMGREP, "error", message=f"Semgrep a dépassé {timeout}s.")
+            return ToolRun(ToolName.SEMGREP, "error", message=f"Semgrep timed out after {timeout}s.")
 
         try:
             data = _load_json_file(report)
         except json.JSONDecodeError as exc:
-            return ToolRun(ToolName.SEMGREP, "error", message=f"Rapport Semgrep illisible : {exc}")
+            return ToolRun(ToolName.SEMGREP, "error", message=f"Unreadable Semgrep report: {exc}")
 
     # Sans --error, Semgrep sort en 0 même s'il trouve des problèmes : un
     # code non nul veut dire qu'il n'a pas pu tourner (config, réseau...).
     if proc.returncode != 0 or data is None:
         hint = ""
         if config == "auto" and "semgrep.dev" in (proc.stderr or ""):
-            hint = (" --config auto télécharge les règles sur semgrep.dev : pas d'accès"
-                    " Internet ? Sinon passe un fichier de règles local avec --semgrep-config.")
+            hint = (" --config auto downloads rules from semgrep.dev: no Internet access?"
+                    " Otherwise pass a local rules file with --semgrep-config.")
         return ToolRun(
             ToolName.SEMGREP, "error",
-            message=f"Semgrep a échoué (code {proc.returncode}).{hint}\n{_tail(proc.stderr)}",
+            message=f"Semgrep failed (exit code {proc.returncode}).{hint}\n{_tail(proc.stderr)}",
         )
 
     return ToolRun(

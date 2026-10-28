@@ -57,7 +57,7 @@ def test_missing_binary_is_reported_not_raised(tmp_path: Path) -> None:
     for runner in (run_gitleaks, run_checkov, run_semgrep):
         run = runner(tmp_path, binary="scanner-qui-n-existe-pas")
         assert run.status == "missing"
-        assert "introuvable" in (run.message or "")
+        assert "not found" in (run.message or "")
         assert run.findings == []
 
 
@@ -68,7 +68,7 @@ def test_garbage_output_is_an_error(tmp_path: Path) -> None:
     fake.chmod(fake.stat().st_mode | stat.S_IEXEC)
     run = run_checkov(tmp_path, binary=str(fake))
     assert run.status == "error"
-    assert "non JSON" in (run.message or "")
+    assert "not JSON" in (run.message or "")
 
 
 # --------------------------------------------------------------------------- #

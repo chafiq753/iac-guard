@@ -79,10 +79,10 @@ def annotations(findings: list[Finding], root: Path, fail_on: str | None,
                     props.append(f"endLine={f.line_end}")
         message = f.title
         if f.resource:
-            message += f"\nRessource : {f.resource}"
+            message += f"\nResource: {f.resource}"
         if f.remediation:
-            message += f"\nCorrection : {f.remediation}"
-        message += f"\n(détecté par {f.source.value})"
+            message += f"\nFix: {f.remediation}"
+        message += f"\n(found by {f.source.value})"
         lines.append(f"::{_level(f.severity.value, fail_on)} {','.join(props)}::{_escape_data(message)}")
     return lines
 
@@ -96,12 +96,12 @@ def step_summary(findings: list[Finding], root: Path, score: int, grade: str,
     repo = env.get("GITHUB_REPOSITORY")
     sha = env.get("GITHUB_SHA")
 
-    out = ["## iac-guard", "", f"**Score : {score}/100 (note {grade})** — {verdict}", ""]
+    out = ["## iac-guard", "", f"**Score: {score}/100 (grade {grade})** — {verdict}", ""]
     if not findings:
-        out.append("Aucun problème détecté.")
+        out.append("No issues found.")
         return "\n".join(out) + "\n"
 
-    out += ["| Gravité | Outil | Règle | Emplacement | Problème |", "|---|---|---|---|---|"]
+    out += ["| Severity | Tool | Rule | Location | Issue |", "|---|---|---|---|---|"]
     for f in findings[:MAX_SUMMARY_ROWS]:
         path = repo_path(f, root, Path(ws) if ws else None)
         loc = "-"
@@ -118,5 +118,5 @@ def step_summary(findings: list[Finding], root: Path, score: int, grade: str,
         title = f.title.replace("|", "\\|").replace("\n", " ")
         out.append(f"| {f.severity.value.upper()} | {f.source.value} | `{f.rule_id}` | {loc} | {title} |")
     if len(findings) > MAX_SUMMARY_ROWS:
-        out.append(f"\n… et {len(findings) - MAX_SUMMARY_ROWS} autres (voir le rapport JSON).")
+        out.append(f"\n… and {len(findings) - MAX_SUMMARY_ROWS} more (see the JSON report).")
     return "\n".join(out) + "\n"

@@ -72,13 +72,13 @@ def scan(
     """
     path = Path(path).resolve()
     if not path.is_dir():
-        raise NotADirectoryError(f"Dossier introuvable : {path}")
+        raise NotADirectoryError(f"Directory not found: {path}")
 
     runs: list[ToolRun] = []
     for tool in tools:
         runner = RUNNERS.get(tool)
         if runner is None:
-            raise ValueError(f"Aucun runner pour l'outil {tool.value!r}.")
+            raise ValueError(f"No runner for tool {tool.value!r}.")
         if on_start:
             on_start(tool)
         if tool is ToolName.SEMGREP:

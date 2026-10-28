@@ -73,7 +73,7 @@ def to_sarif(
 
         text = f.title
         if f.resource:
-            text += f" (ressource : {f.resource})"
+            text += f" (resource: {f.resource})"
         result: dict = {
             "ruleId": f.rule_id,
             "ruleIndex": rules[f.rule_id],

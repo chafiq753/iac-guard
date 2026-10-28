@@ -53,14 +53,14 @@ def parse_gitleaks(data: Any) -> list[Finding]:
                 source=ToolName.GITLEAKS,
                 category=Category.SECRET,
                 rule_id=item.get("RuleID", "unknown"),
-                title=item.get("Description", "Secret détecté"),
+                title=item.get("Description", "Secret detected"),
                 severity=Severity.CRITICAL,
                 resource=None,
                 file=item.get("File"),
                 line_start=item.get("StartLine"),
                 line_end=item.get("EndLine"),
-                remediation="Retirer le secret du code, le révoquer et le stocker "
-                "dans un gestionnaire de secrets (Vault, SSM, GitHub Secrets).",
+                remediation="Remove the secret from the code, revoke it, and store it "
+                "in a secrets manager (Vault, SSM, GitHub Secrets).",
                 raw=item,
             )
         )
@@ -93,7 +93,7 @@ def parse_checkov(data: Any) -> list[Finding]:
                         else Category.MISCONFIGURATION
                     ),
                     rule_id=check_id,
-                    title=chk.get("check_name", "Mauvaise configuration"),
+                    title=chk.get("check_name", "Misconfiguration"),
                     severity=_norm_severity(
                         chk.get("severity"), checkov_default_severity(check_id)
                     ),
@@ -128,7 +128,7 @@ def parse_conftest(data: Any) -> list[Finding]:
                         source=ToolName.CONFTEST,
                         category=Category.POLICY,
                         rule_id=meta.get("rule_id") or block.get("namespace") or "policy",
-                        title=meta.get("title") or entry.get("msg", "Violation de règle métier"),
+                        title=meta.get("title") or entry.get("msg", "Policy violation"),
                         severity=_norm_severity(meta.get("severity"), default_sev),
                         resource=meta.get("resource"),
                         file=filename,
@@ -160,7 +160,7 @@ def parse_semgrep(data: Any) -> list[Finding]:
                 source=ToolName.SEMGREP,
                 category=Category.VULNERABILITY,
                 rule_id=item.get("check_id", "unknown"),
-                title=extra.get("message", "Vulnérabilité détectée").split("\n")[0],
+                title=extra.get("message", "Vulnerability detected").split("\n")[0],
                 severity=_norm_severity(extra.get("severity"), Severity.MEDIUM),
                 resource=None,
                 file=item.get("path"),
