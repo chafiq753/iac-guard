@@ -8,6 +8,10 @@
 #   3. release : crée la Release GitHub et déplace le tag majeur (v1) pour
 #                que `uses: chafiq753/iac-guard@v1` prenne cette version
 #
+# pypi et release sont indépendants : si PyPI échoue (publisher pas encore
+# configuré, panne), la Release GitHub et l'action sortent quand même. Il
+# suffit ensuite de cliquer « Re-run failed jobs » sur ce run pour publier.
+#
 # L'image Docker est publiée en parallèle par docker.yml (:1.0.0, :1, :latest).
 name: Release
 
@@ -78,7 +82,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   release:
-    needs: pypi
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
