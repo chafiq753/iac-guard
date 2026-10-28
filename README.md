@@ -6,8 +6,8 @@
 
 iac-guard runs **Gitleaks**, **Checkov** and **Semgrep** on your repository and merges their findings into a single report with a 0-100 security score. It returns a pass/fail verdict that can block a pull request.
 
-[![Tests](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml/badge.svg?branch=tool)](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml)
-[![Docker image](https://github.com/chafiq753/iac-guard/actions/workflows/docker.yml/badge.svg?branch=tool)](https://github.com/chafiq753/iac-guard/pkgs/container/iacguard)
+[![Tests](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/chafiq753/iac-guard/actions/workflows/tests.yml)
+[![Docker image](https://github.com/chafiq753/iac-guard/actions/workflows/docker.yml/badge.svg?branch=main)](https://github.com/chafiq753/iac-guard/pkgs/container/iacguard)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green)](LICENSE)
 
@@ -297,6 +297,8 @@ The score never goes below 0. Ignored findings and excluded paths are not counte
 This repository also contains a self-hosted web dashboard (`backend/`: FastAPI + PostgreSQL, `frontend/`: Next.js). It stores scan history and maps findings to compliance frameworks (Moroccan Law 09-08 / CNDP, Bank Al-Maghrib directives, CIS AWS Benchmark, ISO 27001). It also provides role-based access control and an audit log.
 
 The dashboard is **not required**. The CLI and the GitHub Action are fully standalone, and the dashboard only consumes the JSON reports they produce.
+
+Dashboard documentation (in French): [docs/DASHBOARD.md](docs/DASHBOARD.md). The last version before the standalone CLI is kept on the [`dashboard`](https://github.com/chafiq753/iac-guard/tree/dashboard) branch.
 
 ## Development
 

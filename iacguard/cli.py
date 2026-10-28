@@ -645,7 +645,7 @@ def show(
 
 
 # Version de l'action GitHub écrite par `iacguard init --github`.
-ACTION_REF = "tool"   # deviendra "v1" à la publication
+ACTION_REF = "main"   # deviendra "v1" au tag v1.0.0
 
 
 def _default_branch(path: Path) -> str:

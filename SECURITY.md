@@ -7,7 +7,7 @@ iac-guard is a security tool and is often run in CI with access to source code a
 | Version | Supported |
 |---|---|
 | 1.x (latest release) | Yes |
-| < 1.0 (pre-releases, `tool` branch) | No |
+| < 1.0 (pre-releases, unreleased `main`) | No |
 
 Security fixes are released as a new patch version. The `v1` tag of the GitHub Action and the `:1` / `:latest` Docker tags are moved to the fixed release.
 
