@@ -134,7 +134,7 @@ def _parse_tools(value: str) -> list[ToolName]:
 
 
 def _plural(n: int, word: str) -> str:
-    return f"{n} {word}{'s' if n > 1 else ''}"
+    return f"{n} {word}{'' if n == 1 else 's'}"
 
 
 def _abs_file(f: Finding, root: Path) -> Path | None:
